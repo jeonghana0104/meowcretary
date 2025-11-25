@@ -27,7 +27,7 @@ export default function PasswordSetting() {
       />
 
       <button className="w-full bg-[#B783FF] text-white py-3 rounded font-semibold">
-        변경하기
+        변경ㄴㄴㄴㄴ하기
       </button>
 
       <button
