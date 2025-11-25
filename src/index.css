@@ -3,5 +3,6 @@
 @tailwind utilities;
 
 
+
 /* App-wide utility classes */
 :root { color-scheme: light dark; }
