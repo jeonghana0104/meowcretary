@@ -89,34 +89,98 @@ export default function MemberInfoSetting() {
         <div className="w-full h-6 shrink-0 transition-colors duration-300" style={{ height: '24px', flexShrink: 0, backgroundColor: bgStyle }} />
 
         {/* 헤더 */}
-        <header className="px-4 flex flex-col items-center pt-2 pb-3 shrink-0" style={{ padding: '8px 16px 12px', borderBottom: `1px solid ${borderStyle}`, display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-          <div className="flex items-center gap-2 mb-3" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <img src={CatLogo} alt="Logo" className="w-5 h-5 object-contain" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
-            <span className="text-lg font-bold" style={{ fontSize: '18px', fontWeight: 'bold' }}>비서냥이</span>
-          </div>
+        <header
+  className="px-4 flex flex-col items-center border-b shrink-0"
+  style={{
+    padding: "0 16px",
+    borderBottom: `1px solid ${borderStyle}`,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    flexShrink: 0,
+  }}
+>
+  {/* 로고 */}
+  <div
+    className="flex items-center gap-2 mb-2 mt-2"
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      marginBottom: "8px",
+      marginTop: "8px",
+    }}
+  >
+    <img
+      src={CatLogo}
+      className="object-contain"
+      style={{
+        width: "50px",
+        height: "50px",
+        marginRight: "10px",
+        objectFit: "contain",
+      }}
+    />
+    <span
+      className="text-lg font-semibold"
+      style={{ fontSize: "18px", fontWeight: "600" }}
+    >
+      비서냥이
+    </span>
+  </div>
 
-          {/* 메뉴 버튼 (배경색 연한 하늘색으로 변경) */}
-          <div
-            className="w-full flex items-center py-2.5 px-3 rounded-lg cursor-pointer transition-colors duration-300"
-            style={{ 
-                width: '100%', 
-                backgroundColor: headerBgStyle, 
-                padding: '10px 12px', 
-                borderRadius: '8px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                cursor: 'pointer' 
-            }}
-            onClick={() => navigate("/menu")}
-          >
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5 mr-3" style={{ width: '20px', height: '20px', marginRight: '12px', color: textStyle }}>
-              <path d="M3 6H21" />
-              <path d="M3 12H21" />
-              <path d="M3 18H21" />
-            </svg>
-            <span className="text-base font-semibold" style={{ fontSize: '16px', fontWeight: '600' }}>회원정보 설정</span>
-          </div>
-        </header>
+  {/* 통일된 헤더 바 */}
+  <div
+    style={{
+      width: "100%",
+      backgroundColor: isLight ? "#2E63A6" : "#374151",
+      padding: "10px 6px",
+      marginBottom: "8px",
+      borderRadius: "4px",
+      position: "relative",
+      textAlign: "center",
+    }}
+  >
+    <button
+      onClick={() => navigate("/menu")}
+      style={{
+        position: "absolute",
+        left: "12px",
+        top: "50%",
+        transform: "translateY(-50%)",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        color: "white",
+      }}
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke= "white"
+        strokeWidth="2"
+        strokeLinecap="round"
+      >
+        <path d="M3 6H21" />
+        <path d="M3 12H21" />
+        <path d="M3 18H21" />
+      </svg>
+    </button>
+
+    <span
+      style={{
+        fontSize: "18px",
+        fontWeight: 600,
+        color: "white",
+      }}
+    >
+      회원정보 설정
+    </span>
+  </div>
+</header>
+
 
         {/* 메인 내용 */}
         <main className="flex-1 w-full px-5 py-5 overflow-y-auto scrollbar-hide" style={{ flex: 1, width: '100%', padding: '20px', overflowY: 'auto' }}>

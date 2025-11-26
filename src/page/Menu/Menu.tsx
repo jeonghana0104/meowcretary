@@ -1,9 +1,18 @@
 import React from "react";
 import CatLogo from "../../assets/비서냥이.png";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function Menu() {
   const navigate = useNavigate();
+  const { theme } = useTheme(); // 🔥 테마 가져오기
+
+  // 🔥 테마별 색상 정의
+  const isLight = theme === "light";
+  const bgStyle = isLight ? "white" : "#111827";
+  const textStyle = isLight ? "#1f2937" : "white";
+  const borderStyle = isLight ? "#e5e7eb" : "#374151";
+  const headerBarColor = isLight ? "#2E63A6" : "#374151";
 
   return (
     // 배경색: Tailwind 클래스가 안 먹힐 수 있으므로 style도 병행
@@ -29,44 +38,98 @@ export default function Menu() {
         {/* 상단 여백 */}
         <div className="w-full h-6 bg-white shrink-0" style={{ height: '24px', flexShrink: 0 }}></div>
 
-        {/* 헤더 */}
-        <header className="w-full px-5 pb-4 flex flex-col items-center border-b border-gray-100 shrink-0" style={{ padding: '0 20px 16px', borderBottom: '1px solid #f3f4f6' }}>
-          {/* 로고 */}
-          <div className="flex items-center mb-4" style={{ justifyContent: 'center', display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+        {/* 상태바 */}
+        <div
+          className="w-full h-6 shrink-0"
+          style={{ backgroundColor: bgStyle, height: "24px" }}
+        />
+
+        {/* ▼▼ 통일된 헤더 ▼▼ */}
+        <header
+          className="px-4 flex flex-col items-center border-b shrink-0"
+          style={{
+            padding: "0 16px",
+            borderBottom: `1px solid ${borderStyle}`,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          {/* 로고 + 텍스트 */}
+          <div
+            className="flex items-center gap-2 mt-2 mb-2"
+            style={{ display: "flex", alignItems: "center", gap: "8px" }}
+          >
             <img
               src={CatLogo}
-              alt="Logo"
-              className="w-5 h-5 mr-1.5 object-contain"
-              style={{ width: '20px', height: '20px', marginRight: '6px', objectFit: 'contain' }}
+              className="object-contain"
+              style={{
+                width: "50px",
+                height: "50px",
+                marginRight: "10px",
+                objectFit: "contain",
+              }}
             />
-            <span className="text-lg font-bold text-gray-800" style={{textAlign: 'center', fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>비서냥이</span>
+            <span
+              className="text-lg font-semibold"
+              style={{ fontSize: "18px", fontWeight: "600", color: textStyle }}
+            >
+              비서냥이
+            </span>
           </div>
 
-          {/* 메뉴 타이틀 바 */}
-          <div className="w-full bg-gray-100 py-3 px-4 rounded-lg flex items-center justify-between relative" style={{ width: '100%', backgroundColor: '#f3f4f6', padding: '12px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ width: '24px' }}></div> {/* spacer */}
-            <span className="text-base font-bold text-gray-800" style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937' }}>메뉴</span>
-            
-            {/* 햄버거 아이콘 - 크기 강제 고정 */}
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="24" 
-              height="24" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-              className="w-6 h-6 text-gray-800"
-              style={{ width: '24px', height: '24px', color: '#1f2937' }}
+          {/* 파란 헤더바 */}
+          <div
+            style={{
+              width: "100%",
+              backgroundColor: headerBarColor,
+              padding: "10px 6px",
+              borderRadius: "4px",
+              position: "relative",
+              textAlign: "center",
+              marginBottom: "8px",
+            }}
+          >
+            {/* 메뉴 아이콘 */}
+            <button
+              onClick={() => navigate("/menu")}
+              style={{
+                position: "absolute",
+                left: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
             >
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M3 6H21" />
+                <path d="M3 12H21" />
+                <path d="M3 18H21" />
+              </svg>
+            </button>
+
+            <span
+              style={{
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "white",
+              }}
+            >
+              메뉴
+            </span>
           </div>
         </header>
+
 
         {/* 컨텐츠 영역 */}
         <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ flex: 1, overflowY: 'auto' }}>

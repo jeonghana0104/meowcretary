@@ -71,20 +71,62 @@ const handleSearch = () => {
 
         <header className="px-4 flex flex-col items-center border-b shrink-0" style={{ padding: '0 16px', borderBottom: `1px solid ${borderStyle}`, display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
             <div className="flex items-center gap-2 mb-2 mt-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', marginTop: '8px' }}>
-            <img src={CatLogo} className="object-contain" style={{ width: "20px", height: "20px", marginRight: "10px", objectFit: 'contain' }} />
+            <img src={CatLogo} className="object-contain" style={{ width: "50px", height: "50px", marginRight: "10px", objectFit: 'contain' }} />
             <span className="text-lg font-semibold" style={{ fontSize: '18px', fontWeight: '600' }}>비서냥이</span>
             </div>
 
-            <div className="w-full flex items-center py-2 mb-2 rounded" style={{ width: '100%', backgroundColor: isLight ? '#2E63A6' : '#374151', padding: '8px 6px', marginBottom: '8px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}>
-            <button className="p-0 m-0 mr-2" onClick={() => navigate("/menu")} style={{ padding: 0, margin: 0, marginRight: '8px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ display: "block", width: '13px', height: '13px', color: textStyle }}>
-                <path d="M3 6H21" />
-                <path d="M3 12H21" />
-                <path d="M3 18H21" />
-                </svg>
-            </button>
-            <span className="text-lg font-semibold" style={{ textAlign: 'center', fontSize: '18px', fontWeight: '600' }}>키워드 설정</span>
-            </div>
+            <div
+  className="w-full mb-2 rounded"
+  style={{
+    width: "100%",
+    backgroundColor: isLight ? "#2E63A6" : "#374151",
+    padding: "10px 6px",
+    marginBottom: "8px",
+    borderRadius: "4px",
+    position: "relative",
+    textAlign: "center",
+  }}
+>
+  {/* 왼쪽 메뉴 버튼 */}
+  <button
+    onClick={() => navigate("/menu")}
+    style={{
+      position: "absolute",
+      left: "10px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      background: "none",
+      border: "none",
+      cursor: "pointer",
+      padding: 0,
+    }}
+  >
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={isLight ? "white" : "white"}
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
+      <path d="M3 6H21" />
+      <path d="M3 12H21" />
+      <path d="M3 18H21" />
+    </svg>
+  </button>
+
+  {/* 정확한 가운데 텍스트 */}
+  <span
+    style={{
+      fontSize: "18px",
+      fontWeight: 600,
+      color: "white",
+    }}
+  >
+    키워드 설정
+  </span>
+</div>
         </header>
 
         <div className="flex-1 px-5 py-4 overflow-y-auto scrollbar-hide" style={{ flex: 1, padding: '16px 20px', overflowY: 'auto' }}>
@@ -165,7 +207,7 @@ const handleSearch = () => {
   ))}
                 
 
-                <div className="flex items-center gap-3 py-3 border-b" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: `1px solid ${borderStyle}` }}>
+                <div className="flex items-center gap-3 py-3 border-b" style={{ display: 'flex', alignItems: 'center', gap: '100px', padding: '12px 0', borderBottom: `1px solid ${borderStyle}` }}>
                     <svg width="20" height="20" stroke="#2E63A6" strokeWidth="2" strokeLinecap="round" style={{ width: '20px', height: '20px', stroke: '#2E63A6' }}>
                     <path d="M10 4V16" />
                     <path d="M4 10H16" />
