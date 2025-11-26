@@ -1,59 +1,102 @@
 import React from 'react';
-import CatLogo from '../../assets/react.svg'; // 로고 이미지가 없어서 임시로 react 로고 사용 (나중에 친구랑 같은 걸로 바꾸세요)
+// 로고 이미지가 없다면 텍스트로 대체하거나 경로를 맞춰주세요.
+import CatLogo from '../../assets/비서냥이.png'; 
 import { useNavigate } from 'react-router-dom';
 
 interface MobileLayoutProps {
-  title: string;
-  children: React.ReactNode;
-  showBackBtn?: boolean;
+  title?: string; // 헤더 제목 (옵션)
+  children: React.ReactNode; // 페이지 내용
+  showBackBtn?: boolean; // 뒤로가기 버튼 표시 여부
 }
 
-const MobileLayout: React.FC<MobileLayoutProps> = ({ title, children, showBackBtn = false }) => {
+const MobileLayout: React.FC<MobileLayoutProps> = ({ title = "비서냥이", children, showBackBtn = false }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="w-full min-h-screen flex flex-col items-center bg-gray-100">
-      <div className="w-full max-w-sm bg-white min-h-screen border border-gray-300 shadow-md flex flex-col relative">
+    <div className="w-full min-h-screen flex justify-center items-center bg-[#e8f5e9]" style={{ backgroundColor: '#e8f5e9', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      
+      {/* 핸드폰 프레임 */}
+      <div 
+        className="w-[390px] h-[800px] bg-white border-[14px] border-black rounded-[45px] shadow-2xl flex flex-col overflow-hidden relative"
+        style={{
+            width: '390px',
+            height: '800px',
+            backgroundColor: 'white',
+            border: '14px solid black',
+            borderRadius: '45px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+        }}
+      >
         
-        {/* iOS Status Bar 느낌의 여백 */}
-        <div className="h-11 bg-white flex-shrink-0" />
+        {/* 상단 여백 (Status Bar) */}
+        <div className="w-full h-6 bg-white shrink-0" style={{ height: '24px', flexShrink: 0 }}></div>
 
-        {/* 공통 헤더 */}
-        <header className="w-full px-4 pt-2 pb-3 flex flex-col items-center border-b border-gray-100">
-          {/* 로고 + 앱 이름 */}
-          <div className="flex items-center gap-2 mb-3">
-            {/* 친구 코드의 로고 부분 */}
-            <img src={CatLogo} className="w-5 h-5 object-contain" alt="logo" />
-            <span className="text-lg font-bold text-gray-800">비서냥이</span>
+        {/* 헤더 */}
+        <header className="w-full px-5 pb-4 flex flex-col items-center border-b border-gray-100 shrink-0" style={{ padding: '0 20px 16px', borderBottom: '1px solid #f3f4f6' }}>
+          {/* 로고 */}
+          <div className="flex items-center mb-4" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+            <img
+              src={CatLogo}
+              alt="Logo"
+              className="w-5 h-5 mr-1.5 object-contain"
+              style={{ width: '20px', height: '20px', marginRight: '6px', objectFit: 'contain' }}
+            />
+            <span className="text-lg font-bold text-gray-800" style={{ fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>비서냥이</span>
           </div>
 
-          {/* 페이지 제목 바 (친구 스타일 적용) */}
-          <div className="w-full flex items-center bg-gray-100 py-2 px-3 rounded-lg relative">
-            {showBackBtn && (
-              <button 
-                onClick={() => navigate(-1)} 
-                className="absolute left-3 p-1 text-gray-600 hover:text-black"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* 페이지 타이틀 바 */}
+          <div className="w-full bg-gray-100 py-3 px-4 rounded-lg flex items-center justify-between relative" style={{ width: '100%', backgroundColor: '#f3f4f6', padding: '12px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            
+            {/* 뒤로가기 버튼 */}
+            {showBackBtn ? (
+              <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
                   <path d="M15 18l-6-6 6-6" />
                 </svg>
               </button>
+            ) : (
+              <div style={{ width: '24px' }}></div> // spacer
             )}
-            <span className="text-base font-semibold w-full text-center text-gray-800">
+
+            <span className="text-base font-bold text-gray-800" style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937' }}>
               {title}
             </span>
+            
+            {/* 우측 햄버거 아이콘 (장식용 혹은 메뉴 이동용) */}
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="24" 
+              height="24" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="w-6 h-6 text-gray-800"
+              style={{ width: '24px', height: '24px', color: '#1f2937' }}
+            >
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
           </div>
         </header>
 
-        {/* 메인 컨텐츠 */}
-        <main className="flex-1 w-full overflow-y-auto">
+        {/* 메인 컨텐츠 (스크롤 가능) */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
           {children}
-        </main>
-
-        {/* 하단 iOS Home Indicator */}
-        <div className="px-4 py-4 bg-white flex-shrink-0">
-          <div className="w-28 h-1 bg-gray-300 mx-auto rounded-full" />
         </div>
+
+        {/* 하단 홈 바 */}
+        <div className="w-full h-8 bg-white flex justify-center items-start pt-1 shrink-0" style={{ width: '100%', height: '32px', backgroundColor: 'white', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '4px', flexShrink: 0 }}>
+          <div className="w-32 h-1.5 bg-gray-300 rounded-full" style={{ width: '128px', height: '6px', backgroundColor: '#d1d5db', borderRadius: '9999px' }}></div>
+        </div>
+
       </div>
     </div>
   );

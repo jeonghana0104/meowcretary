@@ -77,7 +77,7 @@ export default function Menu() {
                 정하나 님 &gt;
               </span>
               <div className="flex items-center gap-3" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button className="border border-gray-300 rounded-full px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50" style={{ border: '1px solid #d1d5db', borderRadius: '9999px', padding: '4px 12px', fontSize: '12px', color: '#4b5563', backgroundColor: 'white' }}>
+                <button className="border border-gray-300 rounded-full px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50" onClick={() => navigate("/login")} style={{ border: '1px solid #d1d5db', borderRadius: '9999px', padding: '4px 12px', fontSize: '12px', color: '#4b5563', backgroundColor: 'white' }}>
                   로그아웃
                 </button>
                 {/* 톱니바퀴 아이콘 - 크기 강제 고정 */}
@@ -104,7 +104,7 @@ export default function Menu() {
           {/* 메뉴 리스트 */}
           <div className="px-6 py-10 space-y-6 text-center" style={{ padding: '100px 24px', textAlign: 'center' }}>
             <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black mb-6" onClick={() => navigate("/keyword")} style={{ fontSize: '18px', fontWeight: '500', color: '#374151', marginBottom: '80px', cursor: 'pointer' }}>키워드 설정</p>
-            <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black mb-6" style={{ fontSize: '18px', fontWeight: '500', color: '#374151', marginBottom: '80px', cursor: 'pointer' }}>정보 대시보드</p>
+            <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black mb-6" onClick={() => navigate("/dashboard")} style={{ fontSize: '18px', fontWeight: '500', color: '#374151', marginBottom: '80px', cursor: 'pointer' }}>정보 대시보드</p>
             <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black" onClick={() => navigate("/member")} style={{ fontSize: '18px', fontWeight: '500', color: '#374151', cursor: 'pointer' }}>회원정보 설정</p>
           </div>
         </div>

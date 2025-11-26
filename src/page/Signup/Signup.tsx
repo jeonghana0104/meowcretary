@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// ✅ 여기를 대문자(MobileLayout)로 바꿨습니다!
-import MobileLayout from '@/components/layout/MobileLayout';
-import InputField from '@/components/common/InputField';
-import Button from '@/components/common/Button';
+import CatLogo from '../../assets/비서냥이.png';
+import InputField from '../../components/common/InputField';
+import Button from '../../components/common/Button';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -19,25 +17,63 @@ const Signup: React.FC = () => {
       alert('비밀번호가 일치하지 않습니다.');
       return;
     }
-    console.log('회원가입 시도:', { name, studentId, password, email });
-    alert('회원가입 성공! 로그인 페이지로 이동합니다.');
+    alert('회원가입 성공!');
     navigate('/login');
   };
 
   return (
-    <MobileLayout title="회원가입" showBackBtn={true}>
-      <div className="px-6 py-6 space-y-5">
-        <InputField label="이름" placeholder="이름을 입력하세요" value={name} onChange={(e) => setName(e.target.value)} />
-        <InputField label="학번" placeholder="학번을 입력하세요" value={studentId} onChange={(e) => setStudentId(e.target.value)} />
-        <InputField label="비밀번호" type="password" placeholder="비밀번호" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <InputField label="비밀번호 확인" type="password" placeholder="비밀번호 재확인" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} />
-        <InputField label="이메일" type="email" placeholder="학교 이메일" value={email} onChange={(e) => setEmail(e.target.value)} />
+    <div className="w-full min-h-screen flex justify-center items-center bg-[#e8f5e9]" style={{ backgroundColor: '#e8f5e9', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      
+      <div 
+        className="w-[390px] h-[800px] bg-white border-[14px] border-black rounded-[45px] shadow-2xl flex flex-col overflow-hidden relative"
+        style={{
+            width: '390px', height: '800px', backgroundColor: 'white', border: '14px solid black', borderRadius: '45px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column'
+        }}
+      >
         
-        <div className="pt-4">
-          <Button text="가입하기" onClick={handleSignup} />
+        <div className="w-full h-6 bg-white shrink-0" style={{ height: '24px', flexShrink: 0 }}></div>
+
+        {/* 헤더 */}
+        <header className="w-full px-5 pb-4 flex flex-col items-center border-b border-gray-100 shrink-0" style={{ padding: '0 20px 16px', borderBottom: '1px solid #f3f4f6' }}>
+          <div className="flex items-center mb-4" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+            <img src={CatLogo} alt="Logo" className="w-5 h-5 mr-1.5 object-contain" style={{ width: '20px', height: '20px', marginRight: '6px', objectFit: 'contain' }} />
+            <span className="text-lg font-bold text-gray-800" style={{ fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>비서냥이</span>
+          </div>
+
+          <div className="w-full bg-gray-100 py-3 px-4 rounded-lg flex items-center justify-between relative" style={{ width: '100%', backgroundColor: '#f3f4f6', padding: '12px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {/* 뒤로가기 버튼 추가 */}
+            <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <span className="text-base font-bold text-gray-800" style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937' }}>회원가입</span>
+            <div style={{ width: '24px' }}></div> {/* spacer */}
+          </div>
+        </header>
+
+        {/* 메인 컨텐츠 */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide px-6 py-6" style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+          <div className="space-y-5" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <InputField label="이름" placeholder="이름을 입력하세요" value={name} onChange={(e) => setName(e.target.value)} />
+            <InputField label="학번" placeholder="학번을 입력하세요" value={studentId} onChange={(e) => setStudentId(e.target.value)} />
+            <InputField label="비밀번호" type="password" placeholder="비밀번호" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <InputField label="비밀번호 확인" type="password" placeholder="비밀번호 재확인" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} />
+            <InputField label="이메일" type="email" placeholder="학교 이메일" value={email} onChange={(e) => setEmail(e.target.value)} />
+            
+            <div className="pt-4">
+              <Button text="가입하기" onClick={handleSignup} />
+            </div>
+          </div>
         </div>
+
+        <div className="w-full h-8 bg-white flex justify-center items-start pt-1 shrink-0" style={{ width: '100%', height: '32px', backgroundColor: 'white', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '4px', flexShrink: 0 }}>
+          <div className="w-32 h-1.5 bg-gray-300 rounded-full" style={{ width: '128px', height: '6px', backgroundColor: '#d1d5db', borderRadius: '9999px' }}></div>
+        </div>
+
       </div>
-    </MobileLayout>
+    </div>
   );
 };
 
