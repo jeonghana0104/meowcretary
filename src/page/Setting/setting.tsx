@@ -1,13 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CatLogo from "../../assets/비서냥이.png";
+import { useTheme } from "../../context/ThemeContext"; // 전역 테마 사용
 
 export default function MemberInfoSetting() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme(); // 전역 테마 훅 사용
 
-  // 테마 상태
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [editable, setEditable] = useState(false);
+
   const [form, setForm] = useState({
     name: "정하나",
     studentId: "2024000000",
@@ -15,31 +16,60 @@ export default function MemberInfoSetting() {
     major: "스마트융합공학부 스마트ICT융합 전공",
     grade: 2,
     email: "jeonghan0104@hanyang.ac.kr",
-    phone: "",
+    phone: "010-0000-0000",
     cycle: "1주일",
     notify: true,
   });
 
+  // 전화번호 자동 하이픈 함수
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/[^0-9]/g, "");
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+  };
+
   const handleChange = (e: any) => {
     const { name, value } = e.target;
+
+    // 학번: 최대 10자리
+    if (name === "studentId") {
+      if (value.length > 10) return;
+    }
+
+    // 학년: 1~4 범위 제한
+    if (name === "grade") {
+      const num = parseInt(value);
+      if (value !== "" && (num < 1 || num > 4)) return;
+    }
+
+    // 전화번호: 자동 포맷팅
+    if (name === "phone") {
+      const formatted = formatPhoneNumber(value);
+      setForm({ ...form, phone: formatted });
+      return;
+    }
+
     setForm({ ...form, [name]: value });
   };
 
-  // 테마 관련 변수
+  // 테마 관련 스타일 변수
   const isLight = theme === "light";
-  const bgStyle = isLight ? 'white' : '#111827'; // gray-900
-  const textStyle = isLight ? '#1f2937' : 'white'; // gray-800 vs white
-  const borderStyle = isLight ? '#e5e7eb' : '#374151'; // gray-200 vs gray-700
+  const bgStyle = isLight ? 'white' : '#111827';
+  const textStyle = isLight ? '#374151' : 'white';
+  const borderStyle = isLight ? '#e5e7eb' : '#374151';
   const inputBgStyle = isLight 
     ? (editable ? 'white' : '#f3f4f6') 
-    : (editable ? '#1f2937' : '#374151');
+    : (editable ? '#374151' : '#374151');
+  
+  // 헤더 배경색 (라이트모드: 연한 하늘색, 다크모드: 어두운 회색)
+  const headerBgStyle = isLight ? '#2E63A6' : '#374151'; 
 
   return (
     <div className="w-full min-h-screen flex justify-center items-center bg-[#e8f5e9]" style={{ backgroundColor: '#e8f5e9', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       
-      {/* 핸드폰 프레임 */}
       <div 
-        className={`w-[390px] h-[800px] border-[14px] border-black rounded-[45px] shadow-2xl flex flex-col overflow-hidden relative transition-colors duration-300 ${isLight ? 'bg-white text-gray-900' : 'bg-gray-900 text-white'}`}
+        className={`w-[390px] h-[800px] border-[14px] border-black rounded-[45px] shadow-2xl flex flex-col overflow-hidden relative transition-colors duration-300`}
         style={{
             width: '390px',
             height: '800px',
@@ -55,39 +85,31 @@ export default function MemberInfoSetting() {
             transition: 'background-color 0.3s, color 0.3s'
         }}
       >
-        
         {/* 상단 상태바 */}
         <div className="w-full h-6 shrink-0 transition-colors duration-300" style={{ height: '24px', flexShrink: 0, backgroundColor: bgStyle }} />
 
         {/* 헤더 */}
         <header className="px-4 flex flex-col items-center pt-2 pb-3 shrink-0" style={{ padding: '8px 16px 12px', borderBottom: `1px solid ${borderStyle}`, display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
           <div className="flex items-center gap-2 mb-3" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <img
-              src={CatLogo}
-              alt="Logo"
-              className="w-5 h-5 object-contain"
-              style={{ width: '20px', height: '20px', objectFit: 'contain' }}
-            />
+            <img src={CatLogo} alt="Logo" className="w-5 h-5 object-contain" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
             <span className="text-lg font-bold" style={{ fontSize: '18px', fontWeight: 'bold' }}>비서냥이</span>
           </div>
 
+          {/* 메뉴 버튼 (배경색 연한 하늘색으로 변경) */}
           <div
             className="w-full flex items-center py-2.5 px-3 rounded-lg cursor-pointer transition-colors duration-300"
-            style={{ width: '100%', backgroundColor: isLight ? '#f3f4f6' : '#1f2937', padding: '10px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+            style={{ 
+                width: '100%', 
+                backgroundColor: headerBgStyle, 
+                padding: '10px 12px', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                cursor: 'pointer' 
+            }}
             onClick={() => navigate("/menu")}
           >
-             <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              className="w-5 h-5 mr-3"
-              style={{ width: '20px', height: '20px', marginRight: '12px', color: textStyle }}
-            >
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-5 h-5 mr-3" style={{ width: '20px', height: '20px', marginRight: '12px', color: textStyle }}>
               <path d="M3 6H21" />
               <path d="M3 12H21" />
               <path d="M3 18H21" />
@@ -98,24 +120,37 @@ export default function MemberInfoSetting() {
 
         {/* 메인 내용 */}
         <main className="flex-1 w-full px-5 py-5 overflow-y-auto scrollbar-hide" style={{ flex: 1, width: '100%', padding: '20px', overflowY: 'auto' }}>
-          {[
-            { label: "회원명", key: "name" },
-            { label: "학번", key: "studentId" },
-          ].map((item) => (
-            <div className="mb-4" key={item.key} style={{ marginBottom: '16px' }}>
-              <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>{item.label}</label>
-              <input
-                name={item.key}
-                type="text"
-                value={(form as any)[item.key]}
-                onChange={handleChange}
-                readOnly={!editable}
-                className="w-full border rounded-lg px-3 py-2.5 focus:outline-none"
-                style={{ width: '100%', borderWidth: '1px', borderColor: borderStyle, borderRadius: '8px', padding: '10px 12px', backgroundColor: inputBgStyle, color: textStyle, outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-          ))}
+          
+          {/* 회원명 (수정 가능) */}
+          <div className="mb-4" style={{ marginBottom: '16px' }}>
+            <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>회원명</label>
+            <input
+              name="name"
+              type="text"
+              value={form.name}
+              onChange={handleChange}
+              readOnly={!editable}
+              className="w-full border rounded-lg px-3 py-2.5 focus:outline-none"
+              style={{ width: '100%', borderWidth: '1px', borderColor: borderStyle, borderRadius: '8px', padding: '10px 12px', backgroundColor: inputBgStyle, color: textStyle, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
 
+          {/* 학번 (수정 불가 - readonly 고정) */}
+          <div className="mb-4" style={{ marginBottom: '16px' }}>
+            <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>학번</label>
+            <input
+              name="studentId"
+              type="text"
+              maxLength={10}
+              value={form.studentId}
+              onChange={handleChange}
+              readOnly={true} // 항상 읽기 전용
+              className="w-full border rounded-lg px-3 py-2.5"
+              style={{ width: '100%', borderWidth: '1px', borderColor: borderStyle, borderRadius: '8px', padding: '10px 12px', backgroundColor: isLight ? '#f3f4f6' : '#374151', color: textStyle, boxSizing: 'border-box', opacity: 0.7 }}
+            />
+          </div>
+
+          {/* 비밀번호 (페이지 이동) */}
           <div className="mb-4" style={{ marginBottom: '16px' }}>
             <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>비밀번호</label>
             <input
@@ -128,23 +163,26 @@ export default function MemberInfoSetting() {
             />
           </div>
 
+          {/* 학부/전공 (수정 불가 - readonly 고정) */}
           <div className="mb-4" style={{ marginBottom: '16px' }}>
             <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>학부/전공</label>
             <input
               name="major"
               value={form.major}
-              onChange={handleChange}
-              readOnly={!editable}
+              readOnly={true} // 항상 읽기 전용
               className="w-full border rounded-lg px-3 py-2.5"
-              style={{ width: '100%', borderWidth: '1px', borderColor: borderStyle, borderRadius: '8px', padding: '10px 12px', backgroundColor: inputBgStyle, color: textStyle, boxSizing: 'border-box' }}
+              style={{ width: '100%', borderWidth: '1px', borderColor: borderStyle, borderRadius: '8px', padding: '10px 12px', backgroundColor: isLight ? '#f3f4f6' : '#374151', color: textStyle, boxSizing: 'border-box', opacity: 0.7 }}
             />
           </div>
 
+          {/* 학년 (수정 가능, 1~4 제한) */}
           <div className="mb-4" style={{ marginBottom: '16px' }}>
             <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>학년</label>
             <input
               name="grade"
               type="number"
+              min={1}
+              max={4}
               value={form.grade}
               onChange={handleChange}
               readOnly={!editable}
@@ -153,6 +191,7 @@ export default function MemberInfoSetting() {
             />
           </div>
 
+          {/* 이메일 (수정 가능) */}
           <div className="mb-4" style={{ marginBottom: '16px' }}>
             <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>이메일</label>
             <input
@@ -165,6 +204,7 @@ export default function MemberInfoSetting() {
             />
           </div>
 
+           {/* 전화번호 (수정 가능, 자동 하이픈) */}
            <div className="mb-4" style={{ marginBottom: '16px' }}>
             <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>전화번호</label>
             <input
@@ -178,6 +218,7 @@ export default function MemberInfoSetting() {
             />
           </div>
 
+          {/* 키워드 주기 (수정 가능) */}
           <div className="mb-4" style={{ marginBottom: '16px' }}>
             <label className="block font-medium mb-1 text-sm opacity-80" style={{ display: 'block', marginBottom: '4px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>키워드 자동검색 주기</label>
             <select
@@ -194,6 +235,7 @@ export default function MemberInfoSetting() {
             </select>
           </div>
 
+          {/* 알림 설정 (색상 변경: #2E63A6) */}
           <div className="flex items-center mb-6" style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
             <label className="font-medium mr-3 text-sm opacity-80" style={{ fontWeight: '500', marginRight: '12px', fontSize: '14px', opacity: 0.8 }}>알림설정</label>
             <label className="relative inline-flex items-center cursor-pointer" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -205,11 +247,12 @@ export default function MemberInfoSetting() {
                 checked={form.notify}
                 onChange={() => setForm({ ...form, notify: !form.notify })}
               />
-              <div className={`w-11 h-6 rounded-full transition-colors ${form.notify ? 'bg-[#B783FF]' : 'bg-gray-300'}`} style={{ width: '44px', height: '24px', backgroundColor: form.notify ? '#B783FF' : '#d1d5db', borderRadius: '9999px', transition: 'background-color 0.3s' }} />
+              <div className={`w-11 h-6 rounded-full transition-colors`} style={{ width: '44px', height: '24px', backgroundColor: form.notify ? '#2E63A6' : '#d1d5db', borderRadius: '9999px', transition: 'background-color 0.3s' }} />
               <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform" style={{ position: 'absolute', left: '2px', top: '2px', width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '9999px', transition: 'transform 0.3s', transform: form.notify ? 'translateX(20px)' : 'translateX(0)' }} />
             </label>
           </div>
 
+          {/* 테마 설정 (전역 상태 연동) */}
           <div className="mb-8" style={{ marginBottom: '32px' }}>
             <label className="block font-medium mb-2 text-sm opacity-80" style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px', opacity: 0.8 }}>테마</label>
             <div className="flex gap-5" style={{ display: 'flex', gap: '20px' }}>
@@ -218,7 +261,7 @@ export default function MemberInfoSetting() {
                   type="radio"
                   checked={theme === "light"}
                   onChange={() => setTheme("light")}
-                  className="accent-[#B783FF]"
+                  className="accent-[#2E63A6]" // 색상 변경
                 />
                 라이트
               </label>
@@ -227,16 +270,17 @@ export default function MemberInfoSetting() {
                   type="radio"
                   checked={theme === "dark"}
                   onChange={() => setTheme("dark")}
-                  className="accent-[#B783FF]"
+                  className="accent-[#2E63A6]" // 색상 변경
                 />
                 다크
               </label>
             </div>
           </div>
 
+          {/* 수정 버튼 (색상 변경: #2E63A6) */}
           <button
-            className="w-full py-3.5 rounded-lg bg-[#B783FF] hover:bg-[#a36ce0] text-white font-bold shadow-md transition-all active:scale-[0.98]"
-            style={{ width: '100%', padding: '14px 0', borderRadius: '8px', backgroundColor: '#B783FF', color: 'white', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}
+            className="w-full py-3.5 rounded-lg text-white font-bold shadow-md transition-all active:scale-[0.98]"
+            style={{ width: '100%', padding: '14px 0', borderRadius: '8px', backgroundColor: '#2E63A6', color: 'white', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}
             onClick={() => setEditable(!editable)}
           >
             {editable ? "수정 완료" : "수정"}

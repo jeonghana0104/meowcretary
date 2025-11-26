@@ -32,14 +32,14 @@ export default function Menu() {
         {/* 헤더 */}
         <header className="w-full px-5 pb-4 flex flex-col items-center border-b border-gray-100 shrink-0" style={{ padding: '0 20px 16px', borderBottom: '1px solid #f3f4f6' }}>
           {/* 로고 */}
-          <div className="flex items-center mb-4" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+          <div className="flex items-center mb-4" style={{ justifyContent: 'center', display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
             <img
               src={CatLogo}
               alt="Logo"
               className="w-5 h-5 mr-1.5 object-contain"
               style={{ width: '20px', height: '20px', marginRight: '6px', objectFit: 'contain' }}
             />
-            <span className="text-lg font-bold text-gray-800" style={{ fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>비서냥이</span>
+            <span className="text-lg font-bold text-gray-800" style={{textAlign: 'center', fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>비서냥이</span>
           </div>
 
           {/* 메뉴 타이틀 바 */}
@@ -102,9 +102,9 @@ export default function Menu() {
           </div>
 
           {/* 메뉴 리스트 */}
-          <div className="px-6 py-10 space-y-6 text-center" style={{ padding: '40px 24px', textAlign: 'center' }}>
-            <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black mb-6" onClick={() => navigate("/keyword")} style={{ fontSize: '18px', fontWeight: '500', color: '#374151', marginBottom: '24px', cursor: 'pointer' }}>키워드 설정</p>
-            <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black mb-6" style={{ fontSize: '18px', fontWeight: '500', color: '#374151', marginBottom: '24px', cursor: 'pointer' }}>정보 대시보드</p>
+          <div className="px-6 py-10 space-y-6 text-center" style={{ padding: '100px 24px', textAlign: 'center' }}>
+            <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black mb-6" onClick={() => navigate("/keyword")} style={{ fontSize: '18px', fontWeight: '500', color: '#374151', marginBottom: '80px', cursor: 'pointer' }}>키워드 설정</p>
+            <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black mb-6" style={{ fontSize: '18px', fontWeight: '500', color: '#374151', marginBottom: '80px', cursor: 'pointer' }}>정보 대시보드</p>
             <p className="text-lg font-medium text-gray-700 cursor-pointer hover:text-black" onClick={() => navigate("/member")} style={{ fontSize: '18px', fontWeight: '500', color: '#374151', cursor: 'pointer' }}>회원정보 설정</p>
           </div>
         </div>
