@@ -11,15 +11,16 @@ const Signup: React.FC = () => {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [email, setEmail] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSignup = () => {
     if (password !== passwordConfirm) {
       alert('비밀번호가 일치하지 않습니다.');
       return;
     }
-    alert('회원가입 성공!');
-    navigate('/login');
+    setShowSuccess(true);   // 모달 켜기
   };
+  
 
   return (
     <div className="w-full min-h-screen flex justify-center items-center bg-[#e8f5e9]" style={{ backgroundColor: '#e8f5e9', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -35,20 +36,90 @@ const Signup: React.FC = () => {
         <div className="w-full h-6 bg-white shrink-0" style={{ height: '24px', flexShrink: 0 }}></div>
 
         {/* 헤더 */}
-        <header className="w-full px-5 pb-4 flex flex-col items-center border-b border-gray-100 shrink-0" style={{ padding: '0 20px 16px', borderBottom: '1px solid #f3f4f6' }}>
-          <div className="flex items-center mb-4" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-            <img src={CatLogo} alt="Logo" className="w-5 h-5 mr-1.5 object-contain" style={{ width: '20px', height: '20px', marginRight: '6px', objectFit: 'contain' }} />
-            <span className="text-lg font-bold text-gray-800" style={{ fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>비서냥이</span>
+        <header
+          className="px-4 flex flex-col items-center border-b shrink-0"
+          style={{
+            padding: "0 16px",
+            borderBottom: "1px solid #e5e7eb",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            className="flex items-center gap-2 mb-2 mt-2"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "8px",
+              marginTop: "8px",
+            }}
+          >
+            <img
+              src={CatLogo}
+              className="object-contain"
+              style={{
+                width: "50px",
+                height: "50px",
+                marginRight: "10px",
+                objectFit: "contain",
+              }}
+            />
+            <span
+              className="text-lg font-semibold"
+              style={{ fontSize: "18px", fontWeight: "600" }}
+            >
+              비서냥이
+            </span>
           </div>
 
-          <div className="w-full bg-gray-100 py-3 px-4 rounded-lg flex items-center justify-between relative" style={{ width: '100%', backgroundColor: '#f3f4f6', padding: '12px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {/* 뒤로가기 버튼 추가 */}
-            <button onClick={() => navigate(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4b5563' }}>
-                <path d="M15 18l-6-6 6-6" />
+          <div
+            style={{
+              width: "100%",
+              backgroundColor: "#2E63A6",
+              padding: "10px 6px",
+              marginBottom: "8px",
+              borderRadius: "4px",
+              position: "relative",
+              textAlign: "center",
+            }}
+          >
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 19l-7-7 7-7"></path>
               </svg>
             </button>
-            <span className="text-base font-bold text-gray-800" style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937' }}>회원가입</span>
+
+            <span
+              style={{
+                fontSize: "18px",
+                fontWeight: 600,
+                color: "white",
+              }}
+            >회원가입</span>
             <div style={{ width: '24px' }}></div> {/* spacer */}
           </div>
         </header>
@@ -67,7 +138,61 @@ const Signup: React.FC = () => {
             </div>
           </div>
         </div>
+        {showSuccess && (
+  <div
+    className="fixed inset-0 flex justify-center items-center"
+    style={{
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      backgroundColor: "rgba(0,0,0,0.4)",
+      zIndex: 50,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+    }}
+  >
+    <div
+      style={{
+        width: 260,
+        backgroundColor: "white",
+        borderRadius: 16,
+        padding: 20,
+        textAlign: "center",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+      }}
+    >
+      <p
+        className="font-medium mb-6"
+        style={{
+          fontSize: 16,
+          fontWeight: 500,
+          marginBottom: 24,
+          color: "#1f2937",
+        }}
+      >
+        회원가입이 완료되었습니다.
+      </p>
 
+      <button
+        onClick={() => navigate("/login")}
+        style={{
+          width: "100%",
+          padding: "10px 0",
+          borderRadius: 8,
+          backgroundColor: "#2E63A6",
+          color: "white",
+          fontWeight: 600,
+        }}
+      >
+        확인
+      </button>
+    </div>
+  </div>
+)}
+ 
         <div className="w-full h-8 bg-white flex justify-center items-start pt-1 shrink-0" style={{ width: '100%', height: '32px', backgroundColor: 'white', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '4px', flexShrink: 0 }}>
           <div className="w-32 h-1.5 bg-gray-300 rounded-full" style={{ width: '128px', height: '6px', backgroundColor: '#d1d5db', borderRadius: '9999px' }}></div>
         </div>

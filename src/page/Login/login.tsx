@@ -39,7 +39,7 @@ const Login: React.FC = () => {
         
         <div className="w-full h-6 bg-white shrink-0" style={{ height: '24px', flexShrink: 0 }}></div>
 
-        <header className="w-full px-5 pb-4 flex flex-col items-center border-b border-gray-100 shrink-0" style={{ padding: '0 20px 16px', borderBottom: '1px solid #f3f4f6' }}>
+        {/* <header className="w-full px-5 pb-4 flex flex-col items-center border-b border-gray-100 shrink-0" style={{ padding: '0 20px 16px', borderBottom: '1px solid #f3f4f6' }}>
           <div className="flex items-center mb-4" style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
             <img src={CatLogo} alt="Logo" className="w-5 h-5 mr-1.5 object-contain" style={{ width: '20px', height: '20px', marginRight: '6px', objectFit: 'contain' }} />
             <span className="text-lg font-bold text-gray-800" style={{ fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>비서냥이</span>
@@ -50,7 +50,7 @@ const Login: React.FC = () => {
             <span className="text-base font-bold text-gray-800" style={{ fontSize: '16px', fontWeight: 'bold', color: '#1f2937' }}>로그인</span>
             <div style={{ width: '24px' }}></div>
           </div>
-        </header>
+        </header> */}
 
         <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col justify-center px-6" style={{ flex: 1, overflowY: 'auto', padding: '0 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           

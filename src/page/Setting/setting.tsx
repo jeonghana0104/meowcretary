@@ -293,8 +293,8 @@ export default function MemberInfoSetting() {
               className="w-full border rounded-lg px-3 py-2.5"
               style={{ width: '100%', borderWidth: '1px', borderColor: borderStyle, borderRadius: '8px', padding: '10px 12px', backgroundColor: inputBgStyle, color: textStyle, boxSizing: 'border-box' }}
             >
+              <option>1일</option>
               <option>1주일</option>
-              <option>2주</option>
               <option>1개월</option>
             </select>
           </div>
