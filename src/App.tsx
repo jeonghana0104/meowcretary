@@ -10,6 +10,9 @@ import Menu from './page/Menu/Menu';
 import Login from './page/Login/login';
 import Signup from './page/Signup/Signup';
 import Dashboard from './page/Dashboard/dashboard';
+import MapPage from './page/Map/MapPage';
+import NotificationPage from './page/Notification/NotificationPage';
+import NoticesPage from './page/Notices/NoticesPage';
 
 import './App.css';
 
@@ -23,6 +26,9 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/map" element={<MapPage />} />
+      <Route path="/notifications" element={<NotificationPage />} />
+      <Route path="/notices" element={<NoticesPage />} />
 
       {/* 친구 페이지 */}
       <Route path="/menu" element={<Menu />} />
