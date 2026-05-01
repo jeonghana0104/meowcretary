@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
+import { findBuildingCoords } from '../../data/campusBuildings';
 
 declare global {
   interface Window { kakao: any; }
@@ -36,19 +37,6 @@ interface PlaceResult {
   y: string;
   category_name: string;
 }
-
-// AI 응답 템플릿
-const buildAiResponse = (keyword: string, count: number): string => {
-  if (count === 0) return `"${keyword}" 관련 장소를 주변에서 찾지 못했어요 😿\n검색어를 바꿔서 다시 시도해볼까요?`;
-  const suffix = count === 1 ? '1곳' : `${count}곳`;
-  const emojis: Record<string, string> = {
-    빵: '🥐', 베이커리: '🥐', 카페: '☕', 커피: '☕',
-    식당: '🍽️', 밥: '🍽️', 편의점: '🏪', 약국: '💊',
-    도서관: '📚', 운동: '🏃', 헬스: '💪',
-  };
-  const emoji = Object.entries(emojis).find(([k]) => keyword.includes(k))?.[1] ?? '📍';
-  return `${emoji} **"${keyword}"** 검색 결과를 지도에 표시했어요!\n총 **${suffix}**을 찾았어요. 아래 목록에서 원하는 곳을 클릭하면 지도에서 바로 확인할 수 있어요.`;
-};
 
 // 마커 HTML 생성
 const makeMarkerHtml = (name: string, idx: number, color: string) => `
@@ -133,6 +121,40 @@ const MapPage: React.FC = () => {
     return new Promise((resolve) => {
       if (!mapRef.current || !window.kakao?.maps?.services) { resolve([]); return; }
 
+      const building = findBuildingCoords(keyword);
+
+      if (building) {
+        // ✅ 건물을 찾았으면: 좌표로 바로 마커 표시
+        clearOverlays();
+
+        const pos = new window.kakao.maps.LatLng(building.lat, building.lng);
+
+        // 마커 생성 (건물 전용 스타일)
+        const overlay = new window.kakao.maps.CustomOverlay({
+          position: pos,
+          content: makeMarkerHtml(building.name, 0, '#8b5cf6'), // 💜 보라색 마커
+          yAnchor: 1,
+        });
+        overlay.setMap(mapRef.current);
+        overlaysRef.current.push(overlay);
+
+        // 지도 중심 이동 + 줌
+        mapRef.current.setCenter(pos);
+        mapRef.current.setLevel(3);
+
+        // PlaceResult 형식으로 변환하여 반환 (채팅 카드용)
+        const mockPlace: PlaceResult = {
+          place_name: building.name,
+          address_name: building.address,
+          phone: '',
+          x: building.lng.toString(),
+          y: building.lat.toString(),
+          category_name: '캠퍼스 시설',
+        };
+        resolve([mockPlace]);
+        return;
+      }
+
       const ps = new window.kakao.maps.services.Places();
       const center = new window.kakao.maps.LatLng(ERICA_LAT, ERICA_LNG);
 
@@ -187,17 +209,51 @@ const MapPage: React.FC = () => {
 
   // ── 채팅 메시지 처리 ──
   const processMessage = useCallback(async (text: string) => {
+    // 1. 내가 보낸 메시지를 채팅창에 즉시 추가
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setIsTyping(true);
 
-    await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+    try {
+      // 2. 카카오 맵 장소 검색 수행 (동시에 진행)
+      const places = await searchAndDisplay(text);
 
-    const places = await searchAndDisplay(text);
-    const aiMsg = buildAiResponse(text, places.length);
+      // 3. Spring Boot 백엔드로 Gemini 답변 요청
+      const response = await fetch('http://localhost:8080/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: text }), // 백엔드 DTO(ChatRequest) 필드명과 맞춰야 함
+      });
 
-    setMessages(prev => [...prev, { role: 'ai', content: aiMsg, places }]);
-    setIsTyping(false);
-  }, [searchAndDisplay]);
+      if (!response.ok) {
+        throw new Error('서버 응답 오류');
+      }
+
+      const data = await response.json(); // 백엔드 DTO(GeminiResponse) 결과 { "answer": "..." }
+
+      // 4. AI 답변과 검색된 장소 정보를 합쳐서 출력
+      let finalContent = data.answer;
+      if (places.length > 0) {
+        finalContent += `\n\n📍 주변에서 관련 장소 ${places.length}곳을 찾아 지도에 표시해 두었어요!`;
+      }
+
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        content: finalContent,
+        places: places
+      }]);
+
+    } catch (error) {
+      console.error('연동 에러:', error);
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        content: '죄송해요, 비서냥이 서버가 응답하지 않아요. (백엔드가 켜져 있는지 확인해 주세요!)'
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
+  }, [searchAndDisplay]);// 의존성 배열 유지
 
   const handleChatSend = () => {
     if (!chatInput.trim()) return;
@@ -402,7 +458,7 @@ const MapPage: React.FC = () => {
 
           {/* 빠른 질문 */}
           <div style={{ padding: '8px 12px', borderTop: '1px solid #f3f4f6', display: 'flex', gap: '6px', flexWrap: 'wrap', flexShrink: 0 }}>
-            {['근처 빵집', '카페 추천', '편의점'].map(q => (
+            {['근처 빵집', '카페 추천', '편의점', '음식점'].map(q => (
               <button key={q} onClick={() => { processMessage(q); }}
                 style={{ padding: '5px 10px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', fontSize: '12px', color: '#0369a1', fontWeight: '500', cursor: 'pointer' }}>
                 {q}

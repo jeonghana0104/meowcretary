@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: gemini-backend
+  ai:
+    google:
+      genai:
+        # 환경 변수 GEMINI_API_KEY가 설정되어 있어야 합니다
+        api-key: 'AIzaSyD1JV_wU9rsSxHy4gIHmcj9s5XU8SkMoc0'
+        chat:
+          options:
+            # 2026년 기준 비용 효율이 뛰어난 gemini-2.0-flash 권장
+            model: gemini-2.5-flash-lite
+            temperature: 0.7
+            max-output-tokens: 2000
