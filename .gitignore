@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# firebase
+meowcretary-firebase-adminsdk-fbsvc-6d634af0a5.json
