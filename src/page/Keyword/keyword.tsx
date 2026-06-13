@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
+import { getKeywords, addKeyword, deleteKeyword, type Keyword as KeywordRow } from '../../api/api';
 
 const NAV_MAIN = [
   { icon: '🏠', label: '대시보드', path: '/dashboard' },
@@ -18,29 +19,48 @@ const NAV_SETTINGS = [
 const Keyword: React.FC = () => {
   const navigate = useNavigate();
 
-  const [keywords, setKeywords] = useState([
-    '다자녀장학금', '스마트융합공학부', '가을축제', '기숙사', '봉사활동', '키워드',
-  ]);
+  const [keywords, setKeywords] = useState<KeywordRow[]>([]);
   const [search, setSearch] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newKeyword, setNewKeyword] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<KeywordRow | null>(null);
+  const [error, setError] = useState('');
+
+  // 화면 진입 시 서버에서 키워드 목록 로드
+  useEffect(() => {
+    getKeywords()
+      .then(setKeywords)
+      .catch(e => setError(e instanceof Error ? e.message : '키워드를 불러오지 못했습니다.'));
+  }, []);
 
   const filtered = search.trim()
-    ? keywords.filter(k => k.toLowerCase().includes(search.toLowerCase()))
+    ? keywords.filter(k => k.keyword.toLowerCase().includes(search.toLowerCase()))
     : keywords;
 
-  const confirmAdd = () => {
-    if (!newKeyword.trim()) return;
-    setKeywords(prev => [...prev, newKeyword.trim()]);
-    setNewKeyword('');
-    setIsAdding(false);
+  const confirmAdd = async () => {
+    const kw = newKeyword.trim();
+    if (!kw) return;
+    setError('');
+    try {
+      const added = await addKeyword(kw);
+      setKeywords(prev => [{ id: added.id, keyword: added.keyword }, ...prev]);
+      setNewKeyword('');
+      setIsAdding(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '키워드 추가에 실패했습니다.');
+    }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setKeywords(prev => prev.filter(k => k !== deleteTarget));
-    setDeleteTarget(null);
+    setError('');
+    try {
+      await deleteKeyword(deleteTarget.id);
+      setKeywords(prev => prev.filter(k => k.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '키워드 삭제에 실패했습니다.');
+    }
   };
 
   return (
@@ -144,6 +164,13 @@ const Keyword: React.FC = () => {
           {/* 키워드 카운트 */}
           <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>총 <strong style={{ color: '#111827' }}>{keywords.length}</strong>개의 키워드</p>
 
+          {/* 에러 배너 */}
+          {error && (
+            <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', fontSize: '14px' }}>
+              ⚠ {error}
+            </div>
+          )}
+
           {/* 키워드 목록 */}
           <div style={{ backgroundColor: 'white', borderRadius: '14px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
             {filtered.length === 0 ? (
@@ -152,10 +179,10 @@ const Keyword: React.FC = () => {
               </div>
             ) : (
               filtered.map((kw, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: idx < filtered.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                <div key={kw.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: idx < filtered.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#2563eb', flexShrink: 0 }} />
-                    <span style={{ fontSize: '15px', fontWeight: '500', color: '#111827' }}>{kw}</span>
+                    <span style={{ fontSize: '15px', fontWeight: '500', color: '#111827' }}>{kw.keyword}</span>
                   </div>
                   <button
                     onClick={() => setDeleteTarget(kw)}
@@ -179,7 +206,7 @@ const Keyword: React.FC = () => {
             </div>
             <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', margin: '0 0 8px' }}>키워드 삭제</h3>
             <p style={{ fontSize: '15px', color: '#6b7280', margin: '0 0 28px' }}>
-              <strong style={{ color: '#111827' }}>"{deleteTarget}"</strong> 키워드를<br />삭제하시겠습니까?
+              <strong style={{ color: '#111827' }}>"{deleteTarget.keyword}"</strong> 키워드를<br />삭제하시겠습니까?
             </p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setDeleteTarget(null)}

@@ -111,3 +111,21 @@ export const confirmEmailVerify = (email: string, code: string) =>
 export const saveFcmToken = (token: string) =>
   request<{ ok: boolean }>('/api/user/me/fcm-token', { method: 'POST', body: { token } })
     .then(() => undefined);
+
+// ── 키워드 ──
+export interface Keyword {
+  id: string;
+  keyword: string;
+  createdAt?: string | null;
+}
+
+// GET /api/keywords — 내 키워드 목록 (최신순)
+export const getKeywords = () => request<Keyword[]>('/api/keywords');
+
+// POST /api/keywords — 키워드 추가
+export const addKeyword = (keyword: string) =>
+  request<{ id: string; keyword: string }>('/api/keywords', { method: 'POST', body: { keyword } });
+
+// DELETE /api/keywords/:id — 키워드 삭제
+export const deleteKeyword = (id: string) =>
+  request<{ ok: boolean }>(`/api/keywords/${id}`, { method: 'DELETE' }).then(() => undefined);
