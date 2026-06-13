@@ -158,7 +158,7 @@ const NoticesPage: React.FC = () => {
                 <p style={{ fontSize: '15px' }}>검색 결과가 없습니다.</p>
               </div>
             ) : (
-              filtered.map((n, i) => (
+              filtered.map((n) => (
                 <div key={n.id} onClick={() => openNotice(n)}
                   style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', padding: '16px 24px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', backgroundColor: selected?.id === n.id ? '#f0f9ff' : 'white', transition: 'background 0.1s' }}
                   onMouseEnter={e => { if (selected?.id !== n.id) e.currentTarget.style.backgroundColor = '#f9fafb'; }}

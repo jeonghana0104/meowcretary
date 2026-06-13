@@ -23,5 +23,14 @@ dist-ssr
 *.sln
 *.sw?
 
-# firebase
+# env
+.env
+.env.local
+server/.env
+
+# firebase service account keys (절대 커밋 금지)
 meowcretary-firebase-adminsdk-fbsvc-6d634af0a5.json
+*-firebase-adminsdk-*.json
+
+# server
+server/node_modules

@@ -1,6 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
+import {
+  getMyInfo, updateMyInfo, changePassword,
+  uploadProfilePhoto, requestEmailVerify, confirmEmailVerify,
+} from '../../api/api';
+
+// 업로드 전 이미지를 정사각 max px로 줄이고 JPEG로 압축 (무료 요금제 base64 저장용 — 수십 KB로 축소)
+function resizeImage(file: File, max = 256): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('이 브라우저에서 이미지를 처리할 수 없습니다.'));
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => blob
+          ? resolve(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }))
+          : reject(new Error('이미지 변환에 실패했습니다.')),
+        'image/jpeg',
+        0.85,
+      );
+    };
+    img.onerror = () => reject(new Error('이미지를 읽을 수 없습니다.'));
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 const NAV_MAIN = [
   { icon: '🏠', label: '대시보드', path: '/dashboard' },
@@ -46,12 +78,17 @@ const MemberInfoSetting: React.FC = () => {
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
 
-  const handlePwChange = () => {
+  const handlePwChange = async () => {
     if (!pwForm.current) { setPwError('현재 비밀번호를 입력해주세요.'); return; }
     if (pwForm.next.length < 8) { setPwError('새 비밀번호는 8자 이상이어야 합니다.'); return; }
     if (pwForm.next !== pwForm.confirm) { setPwError('새 비밀번호가 일치하지 않습니다.'); return; }
     setPwError('');
-    setPwSuccess(true);
+    try {
+      await changePassword(pwForm.current, pwForm.next);
+      setPwSuccess(true);
+    } catch (e) {
+      setPwError(e instanceof Error ? e.message : '비밀번호 변경에 실패했습니다.');
+    }
   };
 
   const closePwModal = () => {
@@ -81,8 +118,77 @@ const MemberInfoSetting: React.FC = () => {
     email: 'jeonghan0104@hanyang.ac.kr',
     phone: '010-0000-0000',
     cycle: '1주일',
-    notify: true,
+    notice: true,
+    keyword: true,
+    map: true,
+    photoUrl: '',
+    emailVerified: false,
   });
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // 프로필 사진
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  // 이메일 인증 모달
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailToVerify, setEmailToVerify] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailMsg, setEmailMsg] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+
+  // 화면 진입 시 서버에서 내 정보 로드
+  useEffect(() => {
+    getMyInfo()
+      .then((u) => {
+        setForm({
+          name: u.name ?? '',
+          studentId: u.studentId ?? '',
+          major: u.major ?? '',
+          grade: u.grade ?? '',
+          email: u.email ?? '',
+          phone: u.tel ?? '',
+          cycle: u.searchCycle ?? '1주일',
+          notice: u.notificationSettings?.notice ?? true,
+          keyword: u.notificationSettings?.keyword ?? true,
+          map: u.notificationSettings?.map ?? true,
+          photoUrl: u.photoUrl ?? '',
+          emailVerified: u.emailVerified ?? false,
+        });
+      })
+      .catch((e) => setLoadError(e instanceof Error ? e.message : '정보를 불러오지 못했습니다.'));
+  }, []);
+
+  // 저장: 수정 가능한 필드만 서버로 전송
+  const handleSave = async () => {
+    setSaving(true);
+    setLoadError('');
+    try {
+      const updated = await updateMyInfo({
+        name: form.name,
+        tel: form.phone,
+        grade: form.grade,
+        searchCycle: form.cycle,
+        notificationSettings: { notice: form.notice, keyword: form.keyword, map: form.map },
+      });
+      setForm((f) => ({
+        ...f,
+        name: updated.name,
+        phone: updated.tel,
+        grade: updated.grade,
+        cycle: updated.searchCycle,
+        notice: updated.notificationSettings?.notice ?? f.notice,
+        keyword: updated.notificationSettings?.keyword ?? f.keyword,
+        map: updated.notificationSettings?.map ?? f.map,
+      }));
+      setEditable(false);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : '저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const formatPhone = (val: string) => {
     const n = val.replace(/[^0-9]/g, '');
@@ -98,6 +204,53 @@ const MemberInfoSetting: React.FC = () => {
       return;
     }
     setForm(f => ({ ...f, [name]: value }));
+  };
+
+  // 프로필 사진 선택 → 업로드
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoBusy(true);
+    setLoadError('');
+    try {
+      const resized = await resizeImage(file, 256);
+      const url = await uploadProfilePhoto(resized);
+      setForm(f => ({ ...f, photoUrl: url }));
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : '사진 업로드에 실패했습니다.');
+    } finally {
+      setPhotoBusy(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
+  // 이메일 인증
+  const openEmailVerify = () => {
+    setEmailToVerify(form.email);
+    setEmailCode('');
+    setEmailMsg('');
+    setEmailSent(false);
+    setShowEmailModal(true);
+  };
+  const sendEmailCode = async () => {
+    setEmailMsg('');
+    try {
+      const { devCode } = await requestEmailVerify(emailToVerify);
+      setEmailSent(true);
+      setEmailMsg(devCode ? `인증코드 발송됨 (개발용 코드: ${devCode})` : '인증코드를 메일로 보냈습니다.');
+    } catch (err) {
+      setEmailMsg(err instanceof Error ? err.message : '발송에 실패했습니다.');
+    }
+  };
+  const confirmEmailCode = async () => {
+    setEmailMsg('');
+    try {
+      await confirmEmailVerify(emailToVerify, emailCode);
+      setForm(f => ({ ...f, email: emailToVerify, emailVerified: true }));
+      setShowEmailModal(false);
+    } catch (err) {
+      setEmailMsg(err instanceof Error ? err.message : '인증에 실패했습니다.');
+    }
   };
 
   return (
@@ -169,10 +322,29 @@ const MemberInfoSetting: React.FC = () => {
         <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
           <div style={{ maxWidth: '640px', margin: '0 auto' }}>
 
+            {/* 에러 배너 */}
+            {loadError && (
+              <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '14px' }}>
+                ⚠ {loadError}
+              </div>
+            )}
+
             {/* 프로필 카드 */}
             <div style={{ backgroundColor: 'white', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '24px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '24px', flexShrink: 0 }}>
-                {form.name.charAt(0)}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '800', fontSize: '24px', overflow: 'hidden' }}>
+                  {form.photoUrl
+                    ? <img src={form.photoUrl} alt="프로필" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : form.name.charAt(0)}
+                </div>
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={photoBusy}
+                  title="사진 변경"
+                  style={{ position: 'absolute', right: '-2px', bottom: '-2px', width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'white', border: '1px solid #e5e7eb', cursor: photoBusy ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+                <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoSelect} style={{ display: 'none' }} />
               </div>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>{form.name}</div>
@@ -245,16 +417,25 @@ const MemberInfoSetting: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>이메일</label>
-                  <input
-                    name="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    readOnly={!editable}
-                    style={inputStyle(!editable)}
-                    onFocus={e => editable && (e.target.style.borderColor = '#2563eb')}
-                    onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
-                  />
+                  <label style={labelStyle}>
+                    이메일{' '}
+                    {form.emailVerified
+                      ? <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ 인증됨</span>
+                      : <span style={{ color: '#f59e0b', fontWeight: 700 }}>· 미인증</span>}
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      name="email"
+                      value={form.email}
+                      readOnly
+                      style={{ ...inputStyle(true), flex: 1 }}
+                    />
+                    <button
+                      onClick={openEmailVerify}
+                      style={{ flexShrink: 0, padding: '0 14px', border: '1.5px solid #2563eb', borderRadius: '10px', backgroundColor: 'white', color: '#2563eb', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                      이메일 인증
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -293,18 +474,27 @@ const MemberInfoSetting: React.FC = () => {
                 </select>
               </div>
 
-              {/* 알림 토글 */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>푸시 알림</div>
-                  <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>새 공지사항 알림을 받습니다</div>
-                </div>
-                <button
-                  onClick={() => editable && setForm(f => ({ ...f, notify: !f.notify }))}
-                  style={{ width: '48px', height: '26px', borderRadius: '13px', backgroundColor: form.notify ? '#2563eb' : '#d1d5db', border: 'none', cursor: editable ? 'pointer' : 'not-allowed', position: 'relative', transition: 'background-color 0.2s', flexShrink: 0 }}>
-                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'white', position: 'absolute', top: '3px', left: form.notify ? '25px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                </button>
-              </div>
+              {/* 알림 카테고리별 토글 */}
+              {([
+                { key: 'notice', label: '공지 알림', desc: '새 공지사항 알림을 받습니다' },
+                { key: 'keyword', label: '키워드 알림', desc: '등록한 키워드 관련 소식을 받습니다' },
+                { key: 'map', label: '지도 알림', desc: '캠퍼스 지도 관련 알림을 받습니다' },
+              ] as const).map((item, idx) => {
+                const on = form[item.key];
+                return (
+                  <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: idx === 0 ? 0 : '18px' }}>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{item.label}</div>
+                      <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>{item.desc}</div>
+                    </div>
+                    <button
+                      onClick={() => editable && setForm(f => ({ ...f, [item.key]: !f[item.key] }))}
+                      style={{ width: '48px', height: '26px', borderRadius: '13px', backgroundColor: on ? '#2563eb' : '#d1d5db', border: 'none', cursor: editable ? 'pointer' : 'not-allowed', position: 'relative', transition: 'background-color 0.2s', flexShrink: 0 }}>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'white', position: 'absolute', top: '3px', left: on ? '25px' : '3px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
             {/* 수정/저장 버튼 */}
@@ -317,15 +507,72 @@ const MemberInfoSetting: React.FC = () => {
                 </button>
               )}
               <button
-                onClick={() => setEditable(e => !e)}
-                style={{ flex: 2, padding: '14px', backgroundColor: editable ? '#16a34a' : '#2563eb', color: 'white', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}>
-                {editable ? '✓ 저장하기' : '정보 수정'}
+                onClick={() => (editable ? handleSave() : setEditable(true))}
+                disabled={saving}
+                style={{ flex: 2, padding: '14px', backgroundColor: editable ? '#16a34a' : '#2563eb', color: 'white', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+                {editable ? (saving ? '저장 중…' : '✓ 저장하기') : '정보 수정'}
               </button>
             </div>
 
           </div>
         </div>
       </div>
+
+      {/* ── 이메일 인증 모달 ── */}
+      {showEmailModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '36px 32px', width: '100%', maxWidth: '420px', margin: '0 16px', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <button onClick={() => setShowEmailModal(false)}
+              style={{ position: 'absolute', top: '18px', right: '20px', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '22px', lineHeight: 1 }}>×</button>
+
+            <h3 style={{ fontSize: '22px', fontWeight: '800', color: '#111827', margin: '0 0 6px' }}>이메일 인증</h3>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 24px' }}>학교 이메일(@hanyang.ac.kr)로 인증코드를 보냅니다.</p>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>이메일 주소</label>
+              <input
+                type="email"
+                value={emailToVerify}
+                onChange={e => setEmailToVerify(e.target.value)}
+                placeholder="example@hanyang.ac.kr"
+                style={{ width: '100%', padding: '13px 16px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '15px', color: '#111827', outline: 'none', boxSizing: 'border-box', backgroundColor: '#fafafa' }}
+              />
+            </div>
+
+            {emailSent && (
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>인증코드 (6자리)</label>
+                <input
+                  value={emailCode}
+                  onChange={e => setEmailCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  style={{ width: '100%', padding: '13px 16px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '15px', color: '#111827', outline: 'none', boxSizing: 'border-box', backgroundColor: '#fafafa', letterSpacing: '4px' }}
+                />
+              </div>
+            )}
+
+            {emailMsg && (
+              <p style={{ fontSize: '13px', color: emailMsg.includes('실패') || emailMsg.includes('만료') || emailMsg.includes('올바르') ? '#ef4444' : '#2563eb', margin: '0 0 16px' }}>{emailMsg}</p>
+            )}
+
+            {!emailSent ? (
+              <button onClick={sendEmailCode}
+                style={{ width: '100%', padding: '14px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px', boxSizing: 'border-box' }}>
+                인증코드 발송
+              </button>
+            ) : (
+              <button onClick={confirmEmailCode}
+                style={{ width: '100%', padding: '14px', backgroundColor: '#16a34a', color: 'white', border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', marginBottom: '12px', boxSizing: 'border-box' }}>
+                인증 확인
+              </button>
+            )}
+            <button onClick={() => setShowEmailModal(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'center', fontSize: '14px', color: '#9ca3af', textDecoration: 'underline' }}>
+              취소하고 돌아가기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── 비밀번호 변경 모달 ── */}
       {showPwModal && (

@@ -1,4 +1,3 @@
-import React from "react";
 import CatLogo from "../../assets/비서냥이.png";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
