@@ -1,24 +1,22 @@
 // ────────────────────────────────────────────────────────────
 // Firebase 클라이언트(웹) 설정
-// 여기 들어가는 값은 "공개되어도 안전한 값"입니다. (마스터키 아님!)
+// 값은 소스에 박지 않고 .env 의 VITE_FIREBASE_* 에서 읽는다.
+// (웹 config 자체는 공개돼도 안전한 값이지만, 키를 소스/깃에 두지 않으려고 분리함)
 //
-// 📌 채우는 방법:
-//   1) https://console.firebase.google.com → meowcretary 프로젝트
-//   2) ⚙️(프로젝트 설정) → 아래로 스크롤 → "내 앱" 섹션
-//   3) 웹 앱(</>)이 없으면 "앱 추가 → 웹" 클릭해서 하나 만들기
-//   4) firebaseConfig 객체가 보이면 apiKey / messagingSenderId / appId 를 아래에 붙여넣기
+// 📌 .env 채우는 법: 프로젝트 루트 .env 에 아래 값을 넣으세요. (.env.example 참고)
+//   VITE_FIREBASE_API_KEY, VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID 등
 // ────────────────────────────────────────────────────────────
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyB6RD3RFlg_IGPSG59kv__UIQ6FMfa3KPM',
-  authDomain: 'meowcretary.firebaseapp.com',
-  projectId: 'meowcretary',
-  storageBucket: 'meowcretary.firebasestorage.app',
-  messagingSenderId: '178655890753',
-  appId: '1:178655890753:web:a4401f412937178f1ba5c0',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Firebase 앱 초기화
