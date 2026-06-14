@@ -6,6 +6,19 @@ import requests
 from bs4 import BeautifulSoup
 import os
 
+# import firebase_admin
+# from firebase_admin import credentials
+# from firebase_admin import firestore
+
+# # 1. 2단계에서 crawler 폴더에 넣은 비밀 키 파일 경로 지정
+# cred = credentials.Certificate("firebase_key.json")
+
+# # 2. 파이어베이스 앱 초기화
+# firebase_admin.initialize_app(cred)
+
+# # 3. 🌟 진짜 파이어스토어 DB 객체 소환! (이제 db 변수로 다 제어할 수 있어요)
+# db = firestore.client()
+
 # 🌟 [수정 완료] 구형 서비스 계정 대신 데스크톱 앱(OAuth 2.0)용 라이브러리 임포트
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
