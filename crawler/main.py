@@ -4,12 +4,15 @@ from pydantic import BaseModel
 from typing import List, Optional
 import requests
 from bs4 import BeautifulSoup
+import os
 
-# 🌟 구글 캘린더 API 연동을 위한 라이브러리 임포트
-from google.oauth2 import service_account
+# 🌟 [수정 완료] 구형 서비스 계정 대신 데스크톱 앱(OAuth 2.0)용 라이브러리 임포트
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-# 방금 만든 classifier.py에서 분류 함수 가져오기!
+# classifier.py에서 분류 함수 가져오기
 from classifier import classify_notice 
 
 app = FastAPI()
@@ -22,19 +25,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🌟 구글 캘린더 연동 설정
-# 2단계에서 확인한 조에인 님의 캘린더 ID를 여기에 적어주세요! (기본은 개인 구글 이메일 주소 형태일 확률이 높습니다.)
-GOOGLE_CALENDAR_ID = "choyein466@gmail.com" 
-GOOGLE_CREDS_FILE = "credentials.json" # 1단계에서 다운받아 폴더에 넣은 키 파일명
+# 🌟 구글 캘린더 설정 완료
+GOOGLE_CALENDAR_ID = "choyein466@gmail.com" # 조에인 님의 진짜 구글 달력 ID
+GOOGLE_CREDS_FILE = "credentials.json"       # 구글 콘솔에서 다운받은 데스크톱 키 파일
+TOKEN_FILE = "token.json"                   # 로그인 성공 시 인증 정보가 자동 저장될 파일
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-# 리액트 프론트엔드에서 보내줄 연동 데이터 규칙(Schema) 정의
 class NoticeSyncRequest(BaseModel):
     title: str
     category: str
     date: str
     link: str
     deadline: Optional[str] = None
+
+def get_calendar_service():
+    """🌟 [새로 추가] 데스크톱 앱 키를 읽어서 실제 로그인창을 띄우는 핵심 인증 함수"""
+    creds = None
+    # 이전에 로그인한 기록(token.json)이 있다면 가져오기
+    if os.path.exists(TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+    
+    # 기록이 없거나 만료되었다면 새로 구글 로그인창 띄우기
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(GOOGLE_CREDS_FILE, SCOPES)
+            # 로컬 컴퓨터 브라우저에 구글 로그인 창을 실행합니다
+            creds = flow.run_local_server(port=0)
+        
+        # 로그인이 완료되면 다음에는 창이 안 뜨도록 token.json으로 저장
+        with open(TOKEN_FILE, 'w') as token:
+            token.write(creds.to_json())
+            
+    return build('calendar', 'v3', credentials=creds)
 
 @app.get("/")
 def home():
@@ -104,14 +128,12 @@ def get_hanyang_notice():
     except Exception as e:
         return {"success": False, "error": f"한양대 메인 크롤링 실패: {str(e)}"}
 
-
-# 🚀 [진짜 구글 캘린더 연결 완료] 외부 앱 백엔드 연동 API 엔드포인트!
+# 🚀 외부 앱 백엔드 연동 API 엔드포인트!
 @app.post("/api/sync-apps")
 def sync_to_external_apps(notices: List[NoticeSyncRequest]):
     try:
-        # 구글 캘린더 인증 서비스 빌드
-        creds = service_account.Credentials.from_service_account_file(GOOGLE_CREDS_FILE, scopes=SCOPES)
-        calendar_service = build('calendar', 'v3', credentials=creds)
+        # 🌟 [수정 완료] 새로 만든 우회형 OAuth 서비스 호출
+        calendar_service = get_calendar_service()
         
         sync_results = {
             "google_calendar": [],
@@ -119,23 +141,20 @@ def sync_to_external_apps(notices: List[NoticeSyncRequest]):
         }
         
         for notice in notices:
-            # ── [1] 실제 구글 캘린더 서버에 일정 등록 ──
             if notice.deadline:
-                # 구글 캘린더가 요구하는 API 전송 규격 포맷 생성
                 calendar_event = {
                     'summary': f"[{notice.category}] {notice.title}",
                     'description': f"비서냥이 자동 등록 일정\n원본 링크: {notice.link}",
                     'start': {
-                        'date': notice.deadline,  # YYYY-MM-DD 형식 그대로 적용
+                        'date': notice.deadline,
                         'timeZone': 'Asia/Seoul',
                     },
                     'end': {
-                        'date': notice.deadline,  # 하루 종일 이벤트로 등록
+                        'date': notice.deadline,
                         'timeZone': 'Asia/Seoul',
                     }
                 }
                 
-                # 🚀 실제 구글 서버 API 호출! 일정을 내 달력에 삽입(insert)합니다.
                 calendar_service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=calendar_event).execute()
                 print(f"[📅 구글 캘린더 등록 완료]: {calendar_event['summary']} -> 날짜: {notice.deadline}")
                 
@@ -143,7 +162,6 @@ def sync_to_external_apps(notices: List[NoticeSyncRequest]):
             else:
                 print(f"[📅 구글 캘린더 패스] 마감 날짜 없음: {notice.title}")
             
-            # ── [2] 서버 메모장 파일에 저장 ──
             memo_template = (
                 f"==== 비서냥이 메모장 자동 저장 ====\n"
                 f"📌 정보 분류: {notice.category}\n"
@@ -166,6 +184,5 @@ def sync_to_external_apps(notices: List[NoticeSyncRequest]):
         }
         
     except Exception as e:
-        # 혹시 키 파일이 없거나 아이디 오류가 나면 힌트 제공
         print(f"❌ 구글 연동 오류 원인: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"구글 캘린더 연동 실패. 캘린더 ID나 credentials.json 파일을 확인하세요: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"구글 캘린더 연동 실패: {str(e)}")
