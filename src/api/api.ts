@@ -129,3 +129,35 @@ export const addKeyword = (keyword: string) =>
 // DELETE /api/keywords/:id — 키워드 삭제
 export const deleteKeyword = (id: string) =>
   request<{ ok: boolean }>(`/api/keywords/${id}`, { method: 'DELETE' }).then(() => undefined);
+
+// ── 외부 연동 (조예인 / main 머지) ──
+// 한양대 공지사항 데이터 (파이썬 크롤러 백엔드 :8000)
+export const getHanyangNotice = async () => {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/hanyang-notice');
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("공지사항 가져오기 실패ㅠ:", error);
+    return { success: false, count: 0, data: [] };
+  }
+};
+
+// 🌟 [2단계 추가] 선택한 공지사항 데이터를 백엔드로 전송하는 함수 추가
+export const syncExternalApps = async (selectedNotices: any[]) => {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/sync-apps', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(selectedNotices), // 선택된 공지 데이터를 JSON 문자열로 변환하여 전송
+    });
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("외부앱 연동 전송 실패ㅠ:", error);
+    return { success: false, message: "통신 실패", detail: { google_calendar: [], notepad: [] } };
+  }
+};
