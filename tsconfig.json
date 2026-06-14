@@ -3,13 +3,14 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ],"compilerOptions": {
-"target": "ES2020",
-"module": "ESNext",
-"jsx": "react-jsx",
-"strict": true,
-"baseUrl": "src",
-"paths": { "@/*": ["./*"] },
-
-}
+  ],
+  "compilerOptions": {
+    "skipLibCheck": true,   // 🌟 [추가] 외부 node_modules(index.js 등) 유령 에러를 무시하는 핵심 스위치!
+    "target": "ES2020",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "strict": true,
+    "baseUrl": "src",
+    "paths": { "@/*": ["./*"] }
+  }
 }
