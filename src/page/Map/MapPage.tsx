@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
+import { findBuildingCoords } from '../../data/campusBuildings';
 import { logout } from '../../api/api';
 
 declare global {
   interface Window { kakao: any; }
 }
 
-// ── 한양대 ERICA 캠퍼스 좌표 ──
+// ── 한양대 ERICA 캠퍼스 중심 좌표 ──
 const ERICA_LAT = 37.30089;
 const ERICA_LNG = 126.83375;
 
@@ -37,19 +38,6 @@ interface PlaceResult {
   y: string;
   category_name: string;
 }
-
-// AI 응답 템플릿
-const buildAiResponse = (keyword: string, count: number): string => {
-  if (count === 0) return `"${keyword}" 관련 장소를 주변에서 찾지 못했어요 😿\n검색어를 바꿔서 다시 시도해볼까요?`;
-  const suffix = count === 1 ? '1곳' : `${count}곳`;
-  const emojis: Record<string, string> = {
-    빵: '🥐', 베이커리: '🥐', 카페: '☕', 커피: '☕',
-    식당: '🍽️', 밥: '🍽️', 편의점: '🏪', 약국: '💊',
-    도서관: '📚', 운동: '🏃', 헬스: '💪',
-  };
-  const emoji = Object.entries(emojis).find(([k]) => keyword.includes(k))?.[1] ?? '📍';
-  return `${emoji} **"${keyword}"** 검색 결과를 지도에 표시했어요!\n총 **${suffix}**을 찾았어요. 아래 목록에서 원하는 곳을 클릭하면 지도에서 바로 확인할 수 있어요.`;
-};
 
 // 마커 HTML 생성
 const makeMarkerHtml = (name: string, idx: number, color: string) => `
@@ -107,7 +95,6 @@ const MapPage: React.FC = () => {
     };
     mapRef.current = new window.kakao.maps.Map(mapContainerRef.current, options);
 
-    // 캠퍼스 기준 마커
     const campusPos = new window.kakao.maps.LatLng(ERICA_LAT, ERICA_LNG);
     const campusHtml = `
       <div style="display:flex;flex-direction:column;align-items:center">
@@ -118,58 +105,82 @@ const MapPage: React.FC = () => {
     campusOverlayRef.current.setMap(mapRef.current);
   }, [mapLoaded]);
 
-  // 채팅 스크롤
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // ── 마커 초기화 ──
   const clearOverlays = useCallback(() => {
     overlaysRef.current.forEach(o => o.setMap(null));
     overlaysRef.current = [];
   }, []);
 
-  // ── 장소 검색 & 마커 표시 ──
   const searchAndDisplay = useCallback((keyword: string): Promise<PlaceResult[]> => {
     return new Promise((resolve) => {
       if (!mapRef.current || !window.kakao?.maps?.services) { resolve([]); return; }
+
+      const building = findBuildingCoords(keyword);
+
+      if (building) {
+        clearOverlays();
+        const pos = new window.kakao.maps.LatLng(building.lat, building.lng);
+
+        const overlay = new window.kakao.maps.CustomOverlay({
+          position: pos,
+          content: makeMarkerHtml(building.name, 0, '#8b5cf6'),
+          yAnchor: 1,
+        });
+        overlay.setMap(mapRef.current);
+        overlaysRef.current.push(overlay);
+
+        mapRef.current.setCenter(pos);
+        mapRef.current.setLevel(3);
+
+        const mockPlace: PlaceResult = {
+          place_name: building.name,
+          address_name: building.address,
+          phone: '',
+          x: building.lng.toString(),
+          y: building.lat.toString(),
+          category_name: '캠퍼스 시설',
+        };
+        resolve([mockPlace]);
+        return;
+      }
 
       const ps = new window.kakao.maps.services.Places();
       const center = new window.kakao.maps.LatLng(ERICA_LAT, ERICA_LNG);
 
       ps.keywordSearch(
-        keyword,
-        (data: PlaceResult[], status: string) => {
-          clearOverlays();
-          if (status !== window.kakao.maps.services.Status.OK) { resolve([]); return; }
+          keyword,
+          (data: PlaceResult[], status: string) => {
+            clearOverlays();
+            if (status !== window.kakao.maps.services.Status.OK) { resolve([]); return; }
 
-          const results = data.slice(0, 6);
-          const bounds = new window.kakao.maps.LatLngBounds();
+            const results = data.slice(0, 6);
+            const bounds = new window.kakao.maps.LatLngBounds();
 
-          results.forEach((place, idx) => {
-            const pos = new window.kakao.maps.LatLng(parseFloat(place.y), parseFloat(place.x));
-            bounds.extend(pos);
+            results.forEach((place, idx) => {
+              const pos = new window.kakao.maps.LatLng(parseFloat(place.y), parseFloat(place.x));
+              bounds.extend(pos);
 
-            const overlay = new window.kakao.maps.CustomOverlay({
-              position: pos,
-              content: makeMarkerHtml(place.place_name, idx, '#ef4444'),
-              yAnchor: 1,
+              const overlay = new window.kakao.maps.CustomOverlay({
+                position: pos,
+                content: makeMarkerHtml(place.place_name, idx, '#ef4444'),
+                yAnchor: 1,
+              });
+              overlay.setMap(mapRef.current);
+              overlaysRef.current.push(overlay);
             });
-            overlay.setMap(mapRef.current);
-            overlaysRef.current.push(overlay);
-          });
 
-          // 캠퍼스 마커도 bounds에 포함
-          bounds.extend(new window.kakao.maps.LatLng(ERICA_LAT, ERICA_LNG));
-          mapRef.current.setBounds(bounds);
-          resolve(results);
-        },
-        { location: center, radius: 3000, sort: window.kakao.maps.services.SortBy.DISTANCE },
+            bounds.extend(new window.kakao.maps.LatLng(ERICA_LAT, ERICA_LNG));
+            mapRef.current.setBounds(bounds);
+            resolve(results);
+          },
+          { location: center, radius: 3000, sort: window.kakao.maps.services.SortBy.DISTANCE },
       );
     });
   }, [clearOverlays]);
 
-  // ── 특정 장소로 지도 이동 ──
   const focusPlace = (place: PlaceResult) => {
     if (!mapRef.current) return;
     const pos = new window.kakao.maps.LatLng(parseFloat(place.y), parseFloat(place.x));
@@ -177,7 +188,6 @@ const MapPage: React.FC = () => {
     mapRef.current.setLevel(2);
   };
 
-  // ── 검색창 Enter ──
   const handleSearchSubmit = async (keyword: string) => {
     if (!keyword.trim()) return;
     setChatOpen(true);
@@ -186,19 +196,129 @@ const MapPage: React.FC = () => {
     setSearchInput('');
   };
 
-  // ── 채팅 메시지 처리 ──
+  // ── 🔥 [실시간 GPS 현 위치 가로채기 및 경로 매핑 처리 완료] ──
   const processMessage = useCallback(async (text: string) => {
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setIsTyping(true);
 
-    await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+    let userLat = ERICA_LAT;
+    let userLng = ERICA_LNG;
 
-    const places = await searchAndDisplay(text);
-    const aiMsg = buildAiResponse(text, places.length);
+    const getGPSPosition = (): Promise<{ lat: number; lng: number }> => {
+      return new Promise((resolve) => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+              (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+              () => resolve({ lat: ERICA_LAT, lng: ERICA_LNG }),
+              { timeout: 3000 }
+          );
+        } else {
+          resolve({ lat: ERICA_LAT, lng: ERICA_LNG });
+        }
+      });
+    };
 
-    setMessages(prev => [...prev, { role: 'ai', content: aiMsg, places }]);
-    setIsTyping(false);
-  }, [searchAndDisplay]);
+    const coords = await getGPSPosition();
+    userLat = coords.lat;
+    userLng = coords.lng;
+
+    try {
+      const response = await fetch('http://localhost:8080/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          userLat: userLat,
+          userLng: userLng
+        }),
+      });
+
+      if (!response.ok) throw new Error('서버 응답 오류');
+
+      const data = await response.json();
+      let places: PlaceResult[] = [];
+
+      if (data.location && data.placeName && !data.location.startsWith("|")) {
+        clearOverlays();
+
+        const [targetCoords, routeData] = data.location.split('|');
+        const [latStr, lngStr] = targetCoords.split(',');
+        const lat = parseFloat(latStr);
+        const lng = parseFloat(lngStr);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          const pos = new window.kakao.maps.LatLng(lat, lng);
+
+          // 목적지 마커 바인딩
+          const overlay = new window.kakao.maps.CustomOverlay({
+            position: pos,
+            content: makeMarkerHtml(data.placeName, 0, '#8b5cf6'),
+            yAnchor: 1,
+          });
+          overlay.setMap(mapRef.current);
+          overlaysRef.current.push(overlay);
+
+          // 백엔드 제공 실시간 현 위치 최단 링크 폴리라인 렌더링
+          if (routeData && routeData.trim() !== "") {
+            const linePath: any[] = [];
+            const coordPoints = routeData.split('->');
+
+            coordPoints.forEach((point: string) => {
+              const [pLat, pLng] = point.trim().split(',');
+              if (pLat && pLng) {
+                linePath.push(new window.kakao.maps.LatLng(parseFloat(pLat), parseFloat(pLng)));
+              }
+            });
+
+            const polyline = new window.kakao.maps.Polyline({
+              path: linePath,
+              strokeWeight: 6,
+              strokeColor: '#2563eb',
+              strokeOpacity: 0.8,
+              strokeStyle: 'solid'
+            });
+
+            polyline.setMap(mapRef.current);
+            overlaysRef.current.push(polyline);
+          }
+
+          // 화면 뷰포트 바운드 설정 (현위치와 목적지를 포괄)
+          const bounds = new window.kakao.maps.LatLngBounds();
+          bounds.extend(new window.kakao.maps.LatLng(userLat, userLng));
+          bounds.extend(pos);
+          mapRef.current.setBounds(bounds);
+
+          places.push({
+            place_name: data.placeName,
+            address_name: '한양대학교 ERICA 캠퍼스 내부 시설',
+            phone: '',
+            x: lng.toString(),
+            y: lat.toString(),
+            category_name: '캠퍼스 시설',
+          });
+        }
+      } else {
+        places = await searchAndDisplay(text);
+      }
+
+      let finalContent = data.answer;
+      if (places.length > 0 && data.location && !data.location.startsWith("|")) {
+        finalContent += `\n\n📍 실시간 현 위치 기준 최단 진입로를 탐색하여 최적의 이동 가이드라인 경로를 표시했습니다!`;
+      }
+
+      setMessages(prev => [...prev, {
+        role: 'ai',
+        content: finalContent,
+        places: places
+      }]);
+
+    } catch (error) {
+      console.error('연동 에러:', error);
+      setMessages(prev => [...prev, { role: 'ai', content: '서버 연결 실패' }]);
+    } finally {
+      setIsTyping(false);
+    }
+  }, [clearOverlays, searchAndDisplay]);
 
   const handleChatSend = () => {
     if (!chatInput.trim()) return;
@@ -206,238 +326,237 @@ const MapPage: React.FC = () => {
     setChatInput('');
   };
 
-  const quickSearches = ['근처 빵집', '카페', '학생식당', '편의점', '약국', '버스 정류장'];
+  // ── 🍕 복원 데이터 ──
+  const topQuickSearches = ['근처 맛집', '카페', '학생식당', '편의점', '약국', '버스 정류장'];
+  const chatQuickSearches = ['학연산클러스터', '제1공학관', '학술정보관', '컨퍼런스홀', '창의관', '버스승강장'];
 
   return (
-    <div style={{ height: '100vh', display: 'flex', overflow: 'hidden', fontFamily: "'Pretendard', 'Noto Sans KR', sans-serif" }}>
-
-      {/* ── 사이드바 ── */}
-      <div style={{ width: '210px', height: '100vh', flexShrink: 0, background: 'linear-gradient(180deg, #0a1628 0%, #0d1b3e 100%)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-            <img src={CatLogo} alt="비서냥이" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
-            <div>
-              <div style={{ color: 'white', fontWeight: '800', fontSize: '15px', lineHeight: 1.2 }}>비서냥이</div>
-              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>ERICA 플랫폼</div>
-            </div>
-          </div>
-        </div>
-
-        <nav style={{ flex: 1, padding: '14px 10px', overflowY: 'auto' }}>
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', letterSpacing: '1px', padding: '0 8px', marginBottom: '6px' }}>개인</p>
-          {NAV_MAIN.map(item => {
-            const isActive = item.path === '/map';
-            return (
-              <button key={item.path} onClick={() => navigate(item.path)}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', marginBottom: '2px', background: isActive ? 'rgba(37,99,235,0.28)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-                <span style={{ fontSize: '15px' }}>{item.icon}</span>
-                <span style={{ color: isActive ? 'white' : 'rgba(255,255,255,0.55)', fontSize: '13px', fontWeight: isActive ? '700' : '400', flex: 1 }}>{item.label}</span>
-                {item.badge && <span style={{ fontSize: '9px', backgroundColor: '#2563eb', color: 'white', padding: '2px 5px', borderRadius: '4px', fontWeight: '700' }}>{item.badge}</span>}
-              </button>
-            );
-          })}
-
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', letterSpacing: '1px', padding: '12px 8px 6px', marginBottom: '6px' }}>설정</p>
-          {NAV_SETTINGS.map(item => (
-            <button key={item.path} onClick={() => navigate(item.path)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', marginBottom: '2px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-              <span style={{ fontSize: '15px' }}>{item.icon}</span>
-              <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px' }}>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div style={{ padding: '14px 14px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>조</div>
-            <div>
-              <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>조에인</div>
-              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>스마트융합공학부</div>
-            </div>
-          </div>
-          <button onClick={() => { logout(); navigate('/login'); }}
-            style={{ width: '100%', padding: '7px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '7px', cursor: 'pointer', fontSize: '12px' }}>
-            로그아웃
-          </button>
-        </div>
-      </div>
-
-      {/* ── 지도 + 채팅 영역 ── */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-
-        {/* 지도 컨테이너 */}
-        {mapError ? (
-          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', gap: '16px' }}>
-            <div style={{ fontSize: '48px' }}>🗺️</div>
-            <div style={{ backgroundColor: 'white', borderRadius: '14px', border: '1px solid #fecaca', padding: '24px 32px', maxWidth: '480px', textAlign: 'center' }}>
-              <p style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626', margin: '0 0 8px' }}>카카오맵 API 키 필요</p>
-              <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 16px', whiteSpace: 'pre-line' }}>{mapError}</p>
-              <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '12px 16px', textAlign: 'left', fontFamily: 'monospace', fontSize: '13px', color: '#374151' }}>
-                <div style={{ color: '#9ca3af', marginBottom: '4px' }}># .env.local 파일 생성 후 입력:</div>
-                <div>VITE_KAKAO_MAP_KEY=<span style={{ color: '#2563eb' }}>발급받은_앱키</span></div>
+      <div style={{ height: '100vh', display: 'flex', overflow: 'hidden', fontFamily: "'Pretendard', 'Noto Sans KR', sans-serif" }}>
+        {/* ── 사이드바 ── */}
+        <div style={{ width: '210px', height: '100vh', flexShrink: 0, background: 'linear-gradient(180deg, #0a1628 0%, #0d1b3e 100%)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '22px 20px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <img src={CatLogo} alt="비서냥이" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
+              <div>
+                <div style={{ color: 'white', fontWeight: '800', fontSize: '15px', lineHeight: 1.2 }}>비서냥이</div>
+                <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>ERICA 플랫폼</div>
               </div>
-              <a href="https://developers.kakao.com" target="_blank" rel="noopener noreferrer"
-                style={{ display: 'inline-block', marginTop: '14px', padding: '8px 16px', backgroundColor: '#fee500', color: '#111', borderRadius: '8px', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
-                카카오 개발자센터 →
-              </a>
             </div>
           </div>
-        ) : (
-          <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-        )}
 
-        {/* ── 상단 검색바 (지도 위 float) ── */}
-        {!mapError && (
-          <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: '420px', maxWidth: 'calc(100% - 48px)' }}>
-            <div style={{ backgroundColor: 'white', borderRadius: '14px', boxShadow: '0 4px 20px rgba(0,0,0,0.18)', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearchSubmit(searchInput)}
-                placeholder="장소, 음식, 시설을 검색하세요..."
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: '15px', color: '#111827', backgroundColor: 'transparent' }}
-              />
-              <button
-                onClick={() => handleSearchSubmit(searchInput)}
-                style={{ padding: '7px 14px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                검색
-              </button>
-            </div>
+          <nav style={{ flex: 1, padding: '14px 10px', overflowY: 'auto' }}>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', letterSpacing: '1px', padding: '0 8px', marginBottom: '6px' }}>개인</p>
+            {NAV_MAIN.map(item => {
+              const isActive = item.path === '/map';
+              return (
+                  <button key={item.path} onClick={() => navigate(item.path)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', marginBottom: '2px', background: isActive ? 'rgba(37,99,235,0.28)' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ fontSize: '15px' }}>{item.icon}</span>
+                    <span style={{ color: isActive ? 'white' : 'rgba(255,255,255,0.55)', fontSize: '13px', fontWeight: isActive ? '700' : '400', flex: 1 }}>{item.label}</span>
+                    {item.badge && <span style={{ fontSize: '9px', backgroundColor: '#2563eb', color: 'white', padding: '2px 5px', borderRadius: '4px', fontWeight: '700' }}>{item.badge}</span>}
+                  </button>
+              );
+            })}
 
-            {/* 빠른 검색 태그 */}
-            <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              {quickSearches.map(q => (
-                <button key={q} onClick={() => handleSearchSubmit(q)}
-                  style={{ padding: '5px 12px', backgroundColor: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '20px', fontSize: '12px', fontWeight: '500', color: '#374151', cursor: 'pointer', backdropFilter: 'blur(4px)', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
-                  {q}
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: '700', letterSpacing: '1px', padding: '12px 8px 6px', marginBottom: '6px' }}>설정</p>
+            {NAV_SETTINGS.map(item => (
+                <button key={item.path} onClick={() => navigate(item.path)}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '8px', marginBottom: '2px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                  <span style={{ fontSize: '15px' }}>{item.icon}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px' }}>{item.label}</span>
                 </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── AI 채팅 토글 버튼 ── */}
-        {!mapError && (
-          <button
-            onClick={() => setChatOpen(o => !o)}
-            style={{ position: 'absolute', bottom: '24px', right: chatOpen ? '372px' : '20px', zIndex: 20, width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#2563eb', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', transition: 'right 0.3s ease' }}>
-            {chatOpen ? '✕' : '🐱'}
-          </button>
-        )}
-
-        {/* ── AI 채팅 패널 ── */}
-        <div style={{
-          position: 'absolute', top: 0, right: 0, height: '100%', width: '360px',
-          backgroundColor: 'white', boxShadow: '-4px 0 20px rgba(0,0,0,0.12)',
-          display: 'flex', flexDirection: 'column', zIndex: 15,
-          transform: chatOpen ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 0.3s ease',
-        }}>
-
-          {/* 채팅 헤더 */}
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, background: 'linear-gradient(135deg, #1e3a6e 0%, #1d4ed8 100%)' }}>
-            <img src={CatLogo} alt="비서냥이" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>비서냥이 지도 AI</div>
-              <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '11px' }}>ERICA 캠퍼스 정보 안내</div>
-            </div>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4ade80', boxShadow: '0 0 0 2px rgba(74,222,128,0.3)' }} />
-          </div>
-
-          {/* 메시지 목록 */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {messages.map((msg, idx) => (
-              <div key={idx}>
-                {msg.role === 'ai' ? (
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>🐱</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ backgroundColor: '#f8faff', border: '1px solid #e0e7ff', borderRadius: '4px 14px 14px 14px', padding: '12px 14px', fontSize: '13.5px', color: '#1e293b', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                        {msg.content.replace(/\*\*(.*?)\*\*/g, '$1')}
-                      </div>
-
-                      {/* 장소 카드 */}
-                      {msg.places && msg.places.length > 0 && (
-                        <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {msg.places.map((place, pi) => (
-                            <button key={pi} onClick={() => focusPlace(place)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.15s' }}
-                              onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
-                              onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e7eb'}>
-                              <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#ef4444', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '11px', flexShrink: 0 }}>{pi + 1}</div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: '600', fontSize: '13px', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{place.place_name}</div>
-                                <div style={{ fontSize: '11px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{place.address_name}</div>
-                              </div>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <div style={{ backgroundColor: '#2563eb', color: 'white', borderRadius: '14px 4px 14px 14px', padding: '10px 14px', fontSize: '13.5px', maxWidth: '80%', lineHeight: 1.5 }}>
-                      {msg.content}
-                    </div>
-                  </div>
-                )}
-              </div>
             ))}
+          </nav>
 
-            {/* 타이핑 인디케이터 */}
-            {isTyping && (
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🐱</div>
-                <div style={{ backgroundColor: '#f8faff', border: '1px solid #e0e7ff', borderRadius: '4px 14px 14px 14px', padding: '12px 16px', display: 'flex', gap: '5px', alignItems: 'center' }}>
-                  {[0, 1, 2].map(i => (
-                    <div key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#93c5fd', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          <div style={{ padding: '14px 14px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '10px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>조</div>
+              <div>
+                <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>조에인</div>
+                <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>스마트융합공학부</div>
+              </div>
+            </div>
+            <button onClick={() => { logout(); navigate('/login'); }}
+                    style={{ width: '100%', padding: '7px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '7px', cursor: 'pointer', fontSize: '12px' }}>
+              로그아웃
+            </button>
+          </div>
+        </div>
+
+        {/* ── 지도 + 채팅 영역 ── */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {mapError ? (
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', gap: '16px' }}>
+                <div style={{ fontSize: '48px' }}>🗺️</div>
+                <div style={{ backgroundColor: 'white', borderRadius: '14px', border: '1px solid #fecaca', padding: '24px 32px', maxWidth: '480px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626', margin: '0 0 8px' }}>카카오맵 API 키 필요</p>
+                  <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 16px', whiteSpace: 'pre-line' }}>{mapError}</p>
+                  <div style={{ backgroundColor: '#f9fafb', borderRadius: '8px', padding: '12px 16px', textAlign: 'left', fontFamily: 'monospace', fontSize: '13px', color: '#374151' }}>
+                    <div style={{ color: '#9ca3af', marginBottom: '4px' }}># .env.local 파일 생성 후 입력:</div>
+                    <div>VITE_KAKAO_MAP_KEY=<span style={{ color: '#2563eb' }}>발급받은_앱키</span></div>
+                  </div>
+                  <a href="https://developers.kakao.com" target="_blank" rel="noopener noreferrer"
+                     style={{ display: 'inline-block', marginTop: '14px', padding: '8px 16px', backgroundColor: '#fee500', color: '#111', borderRadius: '8px', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
+                    카카오 개발자센터 →
+                  </a>
+                </div>
+              </div>
+          ) : (
+              <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+          )}
+
+          {/* 🍕 [복원 완료] 상단 메인 검색바 및 주변 상권 빠른 필터 태그 */}
+          {!mapError && (
+              <div style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: '420px', maxWidth: 'calc(100% - 48px)' }}>
+                <div style={{ backgroundColor: 'white', borderRadius: '14px', boxShadow: '0 4px 20px rgba(0,0,0,0.18)', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                  <input
+                      value={searchInput}
+                      onChange={e => setSearchInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSearchSubmit(searchInput)}
+                      placeholder="장소, 음식, 시설을 검색하세요..."
+                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: '15px', color: '#111827', backgroundColor: 'transparent' }}
+                  />
+                  <button
+                      onClick={() => handleSearchSubmit(searchInput)}
+                      style={{ padding: '7px 14px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    검색
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {topQuickSearches.map(q => (
+                      <button key={q} onClick={() => handleSearchSubmit(q)}
+                              style={{ padding: '5px 12px', backgroundColor: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '20px', fontSize: '12px', fontWeight: '500', color: '#374151', cursor: 'pointer', backdropFilter: 'blur(4px)', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
+                        {q}
+                      </button>
                   ))}
                 </div>
               </div>
-            )}
-            <div ref={chatBottomRef} />
-          </div>
+          )}
 
-          {/* 빠른 질문 */}
-          <div style={{ padding: '8px 12px', borderTop: '1px solid #f3f4f6', display: 'flex', gap: '6px', flexWrap: 'wrap', flexShrink: 0 }}>
-            {['근처 빵집', '카페 추천', '편의점'].map(q => (
-              <button key={q} onClick={() => { processMessage(q); }}
-                style={{ padding: '5px 10px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', fontSize: '12px', color: '#0369a1', fontWeight: '500', cursor: 'pointer' }}>
-                {q}
+          {/* AI 채팅 토글 버튼 */}
+          {!mapError && (
+              <button
+                  onClick={() => setChatOpen(o => !o)}
+                  style={{ position: 'absolute', bottom: '24px', right: chatOpen ? '372px' : '20px', zIndex: 20, width: '52px', height: '52px', borderRadius: '50%', backgroundColor: '#2563eb', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', transition: 'right 0.3s ease' }}>
+                {chatOpen ? '✕' : '🐱'}
               </button>
-            ))}
-          </div>
+          )}
 
-          {/* 입력창 */}
-          <div style={{ padding: '12px 14px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px', flexShrink: 0 }}>
-            <input
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleChatSend()}
-              placeholder="궁금한 장소를 물어보세요..."
-              style={{ flex: 1, padding: '10px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', color: '#111827', outline: 'none', backgroundColor: '#fafafa' }}
-              onFocus={e => e.target.style.borderColor = '#2563eb'}
-              onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-            />
-            <button onClick={handleChatSend} disabled={!chatInput.trim() || isTyping}
-              style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: chatInput.trim() && !isTyping ? '#2563eb' : '#e5e7eb', color: chatInput.trim() && !isTyping ? 'white' : '#9ca3af', border: 'none', cursor: chatInput.trim() && !isTyping ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background-color 0.15s' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>
-            </button>
+          {/* AI 채팅 패널 */}
+          <div style={{
+            position: 'absolute', top: 0, right: 0, height: '100%', width: '360px',
+            backgroundColor: 'white', boxShadow: '-4px 0 20px rgba(0,0,0,0.12)',
+            display: 'flex', flexDirection: 'column', zIndex: 15,
+            transform: chatOpen ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 0.3s ease',
+          }}>
+            {/* 채팅 헤더 */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, background: 'linear-gradient(135deg, #1e3a6e 0%, #1d4ed8 100%)' }}>
+              <img src={CatLogo} alt="비서냥이" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>비서냥이 지도 AI</div>
+                <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '11px' }}>ERICA 캠퍼스 정보 안내</div>
+              </div>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4ade80', boxShadow: '0 0 0 2px rgba(74,222,128,0.3)' }} />
+            </div>
+
+            {/* 메시지 목록 */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {messages.map((msg, idx) => (
+                  <div key={idx}>
+                    {msg.role === 'ai' ? (
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                          <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>🐱</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ backgroundColor: '#f8faff', border: '1px solid #e0e7ff', borderRadius: '4px 14px 14px 14px', padding: '12px 14px', fontSize: '13.5px', color: '#1e293b', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                              {msg.content.replace(/\*\*(.*?)\*\*/g, '$1')}
+                            </div>
+
+                            {/* 장소 카드 */}
+                            {msg.places && msg.places.length > 0 && (
+                                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  {msg.places.map((place, pi) => (
+                                      <button key={pi} onClick={() => focusPlace(place)}
+                                              style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'border-color 0.15s' }}
+                                              onMouseEnter={e => e.currentTarget.style.borderColor = '#2563eb'}
+                                              onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e7eb'}>
+                                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#ef4444', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '11px', flexShrink: 0 }}>{pi + 1}</div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ fontWeight: '600', fontSize: '13px', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{place.place_name}</div>
+                                          <div style={{ fontSize: '11px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{place.address_name}</div>
+                                        </div>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                                      </button>
+                                  ))}
+                                </div>
+                            )}
+                          </div>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <div style={{ backgroundColor: '#2563eb', color: 'white', borderRadius: '14px 4px 14px 14px', padding: '10px 14px', fontSize: '13.5px', maxWidth: '80%', lineHeight: 1.5 }}>
+                            {msg.content}
+                          </div>
+                        </div>
+                    )}
+                  </div>
+              ))}
+
+              {/* 타이핑 인디케이터 */}
+              {isTyping && (
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🐱</div>
+                    <div style={{ backgroundColor: '#f8faff', border: '1px solid #e0e7ff', borderRadius: '4px 14px 14px 14px', padding: '12px 16px', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                      {[0, 1, 2].map(i => (
+                          <div key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#93c5fd', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                      ))}
+                    </div>
+                  </div>
+              )}
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* 입력창 및 상단 퀵 가이드 필터 */}
+            <div style={{ borderTop: '1px solid #e5e7eb', flexShrink: 0, backgroundColor: 'white' }}>
+              {/* 🍕 [복원 완료] 채팅 입력창 바로 위의 추천 퀵 버튼 컴포넌트 */}
+              <div style={{ display: 'flex', gap: '5px', padding: '10px 14px 2px', overflowX: 'auto', whiteSpace: 'nowrap', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                {chatQuickSearches.map(q => (
+                    <button key={q} onClick={() => handleSearchSubmit(q)}
+                            style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f1f5f9', border: 'none', borderRadius: '15px', fontSize: '11.5px', fontWeight: '500', color: '#475569', cursor: 'pointer', transition: 'background-color 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+                            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}>
+                      {q}
+                    </button>
+                ))}
+              </div>
+
+              {/* 입력 제어부 */}
+              <div style={{ padding: '8px 14px 14px', display: 'flex', gap: '8px' }}>
+                <input
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleChatSend()}
+                    placeholder="궁금한 장소를 물어보세요..."
+                    style={{ flex: 1, padding: '10px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', color: '#111827', outline: 'none', backgroundColor: '#fafafa' }}
+                />
+                <button onClick={handleChatSend} disabled={!chatInput.trim() || isTyping}
+                        style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: chatInput.trim() && !isTyping ? '#2563eb' : '#e5e7eb', color: chatInput.trim() && !isTyping ? 'white' : '#9ca3af', border: 'none', cursor: chatInput.trim() && !isTyping ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* bounce 애니메이션 */}
-      <style>{`
+        <style>{`
         @keyframes bounce {
           0%, 60%, 100% { transform: translateY(0); }
           30% { transform: translateY(-6px); }
         }
       `}</style>
-    </div>
+      </div>
   );
 };
 
