@@ -3,12 +3,14 @@
 
 const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:4000';
 
-// ⚠️ 로그인 기능이 아직 없어서 현재 사용자 학번을 임시로 보관/전송한다.
-//    로그인이 붙으면 localStorage('studentId') 대신 토큰을 쓰도록 이 부분만 바꾸면 된다.
-const FALLBACK_STUDENT_ID = '2024000000';
+// 로그인 시 받은 JWT를 localStorage에 보관하고, 요청마다 Authorization 헤더로 보낸다. (로그인 6단계)
+const TOKEN_KEY = 'token';
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY);
 
 function authHeader(): Record<string, string> {
-  return { 'x-student-id': localStorage.getItem('studentId') ?? FALLBACK_STUDENT_ID };
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // 공통 요청 헬퍼 — 헤더 주입, JSON/FormData 구분, 에러 메시지 처리를 한 곳에 모은다.
@@ -31,6 +33,88 @@ async function request<T>(
     throw new Error((data as { error?: string }).error ?? `요청 실패 (${res.status})`);
   }
   return res.json() as Promise<T>;
+}
+
+// ── 인증(로그인) ──
+export interface LoginResult {
+  token: string;
+  user: { studentId: string; name: string };
+}
+
+// POST /api/auth/login — 이메일 또는 학번 + 비밀번호. 성공 시 토큰을 localStorage에 저장
+export async function login(identifier: string, password: string): Promise<LoginResult> {
+  const res = await request<LoginResult>('/api/auth/login', {
+    method: 'POST',
+    body: { identifier, password },
+  });
+  localStorage.setItem(TOKEN_KEY, res.token);
+  localStorage.setItem('studentId', res.user.studentId);
+  localStorage.setItem('name', res.user.name);
+  return res;
+}
+
+// 로그아웃 — 토큰 삭제 (JWT는 무상태)
+export function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('studentId');
+  localStorage.removeItem('name');
+}
+
+// 사이드바 등에서 쓸 현재 로그인 사용자 이름
+export const getUserName = () => localStorage.getItem('name') ?? '';
+
+// 회원가입 입력 (이메일은 반드시 @hanyang.ac.kr)
+export interface SignupInput {
+  name: string;
+  studentId: string;
+  email: string;
+  password: string;
+  college?: string;
+  dept?: string;
+  grade?: string;
+  admYear?: string;
+}
+
+// POST /api/auth/signup — 계정 생성 후 자동 로그인(토큰 저장)
+export async function signup(input: SignupInput): Promise<LoginResult> {
+  const res = await request<LoginResult>('/api/auth/signup', { method: 'POST', body: input });
+  localStorage.setItem(TOKEN_KEY, res.token);
+  localStorage.setItem('studentId', res.user.studentId);
+  localStorage.setItem('name', res.user.name);
+  return res;
+}
+
+// 구글 로그인 응답: 기존 계정이면 로그인(토큰), 신규면 온보딩(학번 입력) 필요
+export type GoogleAuthResponse =
+  | { needsOnboarding: false; token: string; user: { studentId: string; name: string } }
+  | { needsOnboarding: true; email: string; name: string };
+
+// POST /api/auth/google — 구글 토큰 검증 → 기존이면 로그인 / 신규면 온보딩 안내
+export async function googleLogin(idToken: string): Promise<GoogleAuthResponse> {
+  const res = await request<GoogleAuthResponse>('/api/auth/google', { method: 'POST', body: { idToken } });
+  if (!res.needsOnboarding) {
+    localStorage.setItem(TOKEN_KEY, res.token);
+    localStorage.setItem('studentId', res.user.studentId);
+  localStorage.setItem('name', res.user.name);
+  }
+  return res;
+}
+
+// POST /api/auth/google/complete — 구글 신규 사용자 가입 완료 (학번 입력 후)
+export interface GoogleCompleteInput {
+  idToken: string;
+  studentId: string;
+  college?: string;
+  dept?: string;
+  grade?: string;
+  admYear?: string;
+}
+export async function googleComplete(input: GoogleCompleteInput): Promise<LoginResult> {
+  const res = await request<LoginResult>('/api/auth/google/complete', { method: 'POST', body: input });
+  localStorage.setItem(TOKEN_KEY, res.token);
+  localStorage.setItem('studentId', res.user.studentId);
+  localStorage.setItem('name', res.user.name);
+  return res;
 }
 
 // ── 알림 카테고리별 설정 ──
@@ -56,6 +140,7 @@ export interface MemberInfo {
   photoUrl?: string | null;          // 프로필 사진 (base64 data URL)
   notificationSettings?: NotificationSettings;
   fcmTokens?: string[];
+  provider?: string;     // 'google' 이면 비밀번호 없음
 }
 
 // 수정 가능한 필드만

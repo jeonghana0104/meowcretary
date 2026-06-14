@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
 import {
   getMyInfo, updateMyInfo, changePassword,
-  uploadProfilePhoto, requestEmailVerify, confirmEmailVerify,
+  uploadProfilePhoto, requestEmailVerify, confirmEmailVerify, logout,
 } from '../../api/api';
 
 // 업로드 전 이미지를 정사각 max px로 줄이고 JPEG로 압축 (무료 요금제 base64 저장용 — 수십 KB로 축소)
@@ -123,6 +123,7 @@ const MemberInfoSetting: React.FC = () => {
     map: true,
     photoUrl: '',
     emailVerified: false,
+    provider: 'local',
   });
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -155,6 +156,7 @@ const MemberInfoSetting: React.FC = () => {
           map: u.notificationSettings?.map ?? true,
           photoUrl: u.photoUrl ?? '',
           emailVerified: u.emailVerified ?? false,
+          provider: u.provider ?? 'local',
         });
       })
       .catch((e) => setLoadError(e instanceof Error ? e.message : '정보를 불러오지 못했습니다.'));
@@ -297,13 +299,15 @@ const MemberInfoSetting: React.FC = () => {
         {/* 유저 */}
         <div style={{ padding: '14px 14px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>조</div>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0, overflow: 'hidden' }}>
+              {form.photoUrl ? <img src={form.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (form.name.charAt(0) || '?')}
+            </div>
             <div>
-              <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>조에인</div>
-              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>스마트융합공학부</div>
+              <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{form.name || '사용자'}</div>
+              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>{form.major || form.studentId}</div>
             </div>
           </div>
-          <button onClick={() => navigate('/login')}
+          <button onClick={() => { logout(); navigate('/login'); }}
             style={{ width: '100%', padding: '7px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '7px', cursor: 'pointer', fontSize: '12px' }}>
             로그아웃
           </button>
@@ -383,12 +387,19 @@ const MemberInfoSetting: React.FC = () => {
 
               <div style={{ marginBottom: '16px' }}>
                 <label style={labelStyle}>비밀번호</label>
-                <button
-                  onClick={() => setShowPwModal(true)}
-                  style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '15px', color: '#6b7280', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>비밀번호 변경하기</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
+                {form.provider === 'google' ? (
+                  <div style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', color: '#6b7280', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>🔵</span>
+                    구글 계정으로 로그인하여 비밀번호가 없습니다.
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowPwModal(true)}
+                    style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '15px', color: '#6b7280', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>비밀번호 변경하기</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
+                )}
               </div>
 
               <div style={{ marginBottom: '16px' }}>
@@ -526,16 +537,16 @@ const MemberInfoSetting: React.FC = () => {
               style={{ position: 'absolute', top: '18px', right: '20px', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '22px', lineHeight: 1 }}>×</button>
 
             <h3 style={{ fontSize: '22px', fontWeight: '800', color: '#111827', margin: '0 0 6px' }}>이메일 인증</h3>
-            <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 24px' }}>학교 이메일(@hanyang.ac.kr)로 인증코드를 보냅니다.</p>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 24px' }}>가입한 이메일로 인증코드를 보냅니다. (이메일은 변경할 수 없습니다)</p>
 
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>이메일 주소</label>
               <input
                 type="email"
                 value={emailToVerify}
-                onChange={e => setEmailToVerify(e.target.value)}
+                readOnly
                 placeholder="example@hanyang.ac.kr"
-                style={{ width: '100%', padding: '13px 16px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '15px', color: '#111827', outline: 'none', boxSizing: 'border-box', backgroundColor: '#fafafa' }}
+                style={{ width: '100%', padding: '13px 16px', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '15px', color: '#6b7280', outline: 'none', boxSizing: 'border-box', backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
               />
             </div>
 

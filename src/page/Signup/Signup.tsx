@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
+import { signup } from '../../api/api';
 
 /* ── 공용 스타일 ── */
 const lbl: React.CSSProperties = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' };
@@ -298,9 +299,21 @@ const Signup: React.FC = () => {
 
   const handleStep1Next = () => {
     if (!name || !studentId || !email || !password || !passwordConfirm) return alert('모든 항목을 입력해주세요.');
+    if (!email.trim().toLowerCase().endsWith('@hanyang.ac.kr')) return alert('한양대학교 이메일(@hanyang.ac.kr)로만 가입할 수 있습니다.');
+    if (password.length < 8) return alert('비밀번호는 8자 이상이어야 합니다.');
     if (password !== passwordConfirm) return alert('비밀번호가 일치하지 않습니다.');
     if (!agreed) return alert('이용약관에 동의해주세요.');
     setStep(2);
+  };
+
+  // 가입 완료: 백엔드에 계정 생성 → 자동 로그인(토큰 저장) → 완료 화면
+  const handleSignup = async () => {
+    try {
+      await signup({ name, studentId, email, password, college, dept, grade, admYear });
+      setStep(3);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '회원가입에 실패했습니다.');
+    }
   };
 
   return (
@@ -327,7 +340,7 @@ const Signup: React.FC = () => {
           dept={dept} setDept={setDept}
           grade={grade} setGrade={setGrade}
           admYear={admYear} setAdmYear={setAdmYear}
-          onNext={() => setStep(3)}
+          onNext={handleSignup}
           onBack={() => setStep(1)}
         />
       )}

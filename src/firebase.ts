@@ -10,14 +10,15 @@
 // ────────────────────────────────────────────────────────────
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: 'TODO_콘솔에서_복사', // ← 여기만 콘솔 값으로 교체
+  apiKey: 'AIzaSyB6RD3RFlg_IGPSG59kv__UIQ6FMfa3KPM',
   authDomain: 'meowcretary.firebaseapp.com',
   projectId: 'meowcretary',
   storageBucket: 'meowcretary.firebasestorage.app',
-  messagingSenderId: 'TODO_콘솔에서_복사', // ← 여기 교체
-  appId: 'TODO_콘솔에서_복사', // ← 여기 교체
+  messagingSenderId: '178655890753',
+  appId: '1:178655890753:web:a4401f412937178f1ba5c0',
 };
 
 // Firebase 앱 초기화
@@ -25,3 +26,6 @@ const app = initializeApp(firebaseConfig);
 
 // Firestore(DB) 핸들 — 다른 파일에서 import 해서 씀
 export const db = getFirestore(app);
+
+// 구글 로그인용 Auth 핸들
+export const auth = getAuth(app);

@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { getToken } from './api/api';
 
 // 친구가 만든 페이지들
 import Keyword from './page/Keyword/keyword';
@@ -16,25 +18,30 @@ import NoticesPage from './page/Notices/NoticesPage';
 
 import './App.css';
 
+// 로그인 안 된(토큰 없는) 상태로 보호된 페이지 접근 시 로그인으로 보냄
+function RequireAuth({ children }: { children: ReactNode }) {
+  return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
 function App() {
   return (
     <Routes>
-      {/* 첫 화면은 로그인 페이지로 설정 (원하면 menu로 바꿔도 됨) */}
+      {/* 첫 화면은 로그인 페이지로 설정 */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-      
-      {/* 작성자님 페이지 */}
+
+      {/* 공개 페이지 (로그인 불필요) */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/map" element={<MapPage />} />
-      <Route path="/notifications" element={<NotificationPage />} />
-      <Route path="/notices" element={<NoticesPage />} />
 
-      {/* 친구 페이지 */}
-      <Route path="/menu" element={<Menu />} />
-      <Route path="/keyword" element={<Keyword />} />
-      <Route path="/member" element={<MemberInfoSetting />} />
-      <Route path="/password" element={<PasswordSetting />} />
+      {/* 보호 페이지 (로그인 필요) */}
+      <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+      <Route path="/map" element={<RequireAuth><MapPage /></RequireAuth>} />
+      <Route path="/notifications" element={<RequireAuth><NotificationPage /></RequireAuth>} />
+      <Route path="/notices" element={<RequireAuth><NoticesPage /></RequireAuth>} />
+      <Route path="/menu" element={<RequireAuth><Menu /></RequireAuth>} />
+      <Route path="/keyword" element={<RequireAuth><Keyword /></RequireAuth>} />
+      <Route path="/member" element={<RequireAuth><MemberInfoSetting /></RequireAuth>} />
+      <Route path="/password" element={<RequireAuth><PasswordSetting /></RequireAuth>} />
     </Routes>
   );
 }

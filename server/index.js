@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { projectId } from './firebase.js';
+import authRouter from './routes/auth.js';
 import userRouter from './routes/user.js';
 import keywordRouter from './routes/keyword.js';
 
@@ -13,6 +14,9 @@ app.use(express.json());
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, project: projectId });
 });
+
+// 인증(로그인) 라우터
+app.use('/api/auth', authRouter);
 
 // 회원정보 라우터
 app.use('/api/user', userRouter);

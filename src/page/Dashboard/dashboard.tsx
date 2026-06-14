@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png'; 
-import { getHanyangNotice, syncExternalApps } from '../../api/api';
+import { getHanyangNotice, syncExternalApps, logout } from '../../api/api';
 
 const KEYWORDS = ['장학금', '공모전', '인턴십', '기말고사', 'SW학부', '채용', '도서관'];
 
@@ -206,7 +206,7 @@ const Dashboard: React.FC = () => {
               <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>스마트융합공학부</div>
             </div>
           </div>
-          <button onClick={() => navigate('/login')}
+          <button onClick={() => { logout(); navigate('/login'); }}
             style={{ width: '100%', padding: '7px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '7px', cursor: 'pointer', fontSize: '12px' }}>
             로그아웃
           </button>

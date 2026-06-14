@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
+import { logout } from '../../api/api';
 
 const NAV_MAIN = [
   { icon: '🏠', label: '대시보드', path: '/dashboard' },
@@ -116,7 +117,7 @@ const NotificationPage: React.FC = () => {
               <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>스마트융합공학부</div>
             </div>
           </div>
-          <button onClick={() => navigate('/login')}
+          <button onClick={() => { logout(); navigate('/login'); }}
             style={{ width: '100%', padding: '7px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '7px', cursor: 'pointer', fontSize: '12px' }}>
             로그아웃
           </button>
