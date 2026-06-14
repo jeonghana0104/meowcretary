@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png'; 
-import { getHanyangNotice, syncExternalApps, logout, getKeywords, type Keyword } from '../../api/api';
+import { getHanyangNotice, syncExternalApps, logout, getKeywords, getUserName, getStudentId, type Keyword } from '../../api/api';
 
 interface AppItem {
   name: string;
@@ -193,10 +193,10 @@ const Dashboard: React.FC = () => {
 
         <div style={{ padding: '14px 14px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>조</div>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>{getUserName().charAt(0) || '?'}</div>
             <div>
-              <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>조에인</div>
-              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>스마트융합공학부</div>
+              <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{getUserName() || '사용자'}</div>
+              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>{getStudentId()}</div>
             </div>
           </div>
           <button onClick={() => { logout(); navigate('/login'); }}
@@ -234,7 +234,7 @@ const Dashboard: React.FC = () => {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M3 6H21"/><path d="M3 12H21"/><path d="M3 18H21"/></svg>
               </div>
               <div>
-                <div style={{ color: 'white', fontWeight: '800', fontSize: '17px', marginBottom: '3px' }}>안녕하세요, 조에인 님!</div>
+                <div style={{ color: 'white', fontWeight: '800', fontSize: '17px', marginBottom: '3px' }}>안녕하세요, {getUserName() || '사용자'} 님!</div>
                 <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>
                   {loading ? "공지사항을 동기화하는 중이에요...🐾" : `현재 한양대 ERICA 최신 공지 ${notices.length}건이 동기화되었습니다.`}
                 </div>

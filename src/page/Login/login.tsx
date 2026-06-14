@@ -51,9 +51,11 @@ const Login: React.FC = () => {
     setLoggingIn(true);
     try {
       const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ hd: 'hanyang.ac.kr' }); // 한양 계정 힌트
+      provider.addScope('email');   // 이메일 권한 명시 요청 (토큰에 email 포함되게)
+      provider.addScope('profile');
+      provider.setCustomParameters({ hd: 'hanyang.ac.kr', prompt: 'select_account' }); // 한양 계정 힌트 + 계정 선택 강제
       const result = await signInWithPopup(firebaseAuth, provider);
-      const idToken = await result.user.getIdToken();
+      const idToken = await result.user.getIdToken(true); // 강제 갱신
       const gRes = await googleLogin(idToken);
       if (gRes.needsOnboarding) {
         // 신규 → 학번 입력 모달 열기

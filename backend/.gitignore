@@ -40,3 +40,11 @@ out/
 ../.env
 *.key
 *.pem
+
+### Firebase 서비스 계정 키 (절대 커밋 금지) ###
+firebase-service-account.json
+**/firebase-service-account.json
+*-firebase-adminsdk-*.json
+
+### 로컬 비밀 설정 (Gemini 키 등) — Spring이 ./config/ 를 자동 로드 ###
+config/

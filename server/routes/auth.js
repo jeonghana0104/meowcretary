@@ -124,21 +124,33 @@ router.post('/google', asyncHandler(async (req, res) => {
     throw httpError(401, '구글 인증에 실패했습니다. 다시 시도해주세요.');
   }
 
-  // 2) 한양대 도메인 강제 (서버에서 진짜 차단)
+  // 2) 식별 정보. 학교 Workspace 계정은 이메일을 안 주기도 해서, 구글 고유 uid로도 식별한다.
   const email = String(decoded.email ?? '').toLowerCase();
-  if (!email.endsWith(SCHOOL_DOMAIN)) {
+  const googleUid = decoded.uid;
+  // 이메일이 "있을 때만" 한양 도메인 검사 (없으면 uid로 식별하므로 통과)
+  if (email && !email.endsWith(SCHOOL_DOMAIN)) {
     throw httpError(403, '한양대학교 구글 계정(@hanyang.ac.kr)으로만 로그인할 수 있습니다.');
   }
 
-  // 3) 이메일로 기존 계정 조회
-  const snap = await db.collection('User').where('email', '==', email).limit(1).get();
-  if (snap.empty) {
-    // 신규 → 학번이 없으므로 온보딩(학번 입력) 필요. 토큰은 아직 발급 안 함.
+  // 3) 기존 계정 조회: 구글 uid 우선 → 없으면 이메일로
+  let doc = null;
+  const byUid = await db.collection('User').where('googleUid', '==', googleUid).limit(1).get();
+  if (!byUid.empty) {
+    doc = byUid.docs[0];
+  } else if (email) {
+    const byEmail = await db.collection('User').where('email', '==', email).limit(1).get();
+    if (!byEmail.empty) {
+      doc = byEmail.docs[0];
+      await doc.ref.update({ googleUid }); // 다음부턴 uid로 바로 로그인되게 연결
+    }
+  }
+
+  if (!doc) {
+    // 신규 → 학번 입력 온보딩 필요
     return res.json({ needsOnboarding: true, email, name: decoded.name ?? '' });
   }
 
-  // 기존 → 바로 로그인
-  const doc = snap.docs[0];
+  // 기존 → 바로 로그인 (자동 로그인)
   const token = signToken({ studentId: doc.id });
   res.json({ needsOnboarding: false, token, user: { studentId: doc.id, name: doc.data().name } });
 }));
@@ -157,32 +169,40 @@ router.post('/google/complete', asyncHandler(async (req, res) => {
     throw httpError(401, '구글 인증이 만료되었습니다. 다시 시도해주세요.');
   }
   const email = String(decoded.email ?? '').toLowerCase();
-  if (!email.endsWith(SCHOOL_DOMAIN)) {
+  const googleUid = decoded.uid;
+  if (email && !email.endsWith(SCHOOL_DOMAIN)) {
     throw httpError(403, '한양대학교 구글 계정(@hanyang.ac.kr)으로만 가입할 수 있습니다.');
   }
 
   const studentId = String(req.body?.studentId ?? '').trim();
   if (!/^\d{6,12}$/.test(studentId)) throw httpError(400, '학번은 숫자만 입력해주세요.');
 
-  // 중복 검사 (학번 + 이메일)
+  // 중복 검사 (학번 + 구글 uid + 이메일)
   const userRef = db.collection('User').doc(studentId);
   if ((await userRef.get()).exists) throw httpError(409, '이미 가입된 학번입니다.');
-  const emailDup = await db.collection('User').where('email', '==', email).limit(1).get();
-  if (!emailDup.empty) throw httpError(409, '이미 가입된 구글 계정입니다.');
+  const uidDup = await db.collection('User').where('googleUid', '==', googleUid).limit(1).get();
+  if (!uidDup.empty) throw httpError(409, '이미 가입된 구글 계정입니다.');
+  if (email) {
+    const emailDup = await db.collection('User').where('email', '==', email).limit(1).get();
+    if (!emailDup.empty) throw httpError(409, '이미 사용 중인 이메일입니다.');
+  }
 
   const college = String(req.body?.college ?? '').trim();
   const dept = String(req.body?.dept ?? '').trim();
   const grade = (String(req.body?.grade ?? '').match(/\d/) ?? ['1'])[0];
   const admYear = (String(req.body?.admYear ?? '').match(/\d{4}/) ?? [''])[0];
+  // 구글 이름이 "정하나 | 학과 | 학교" 형태로 오면 앞부분(이름)만 사용
+  const cleanName = (decoded.name ?? '').split('|')[0].trim() || '사용자';
 
   await userRef.set({
     studentId,
-    name: decoded.name ?? '',
-    email,
-    emailVerified: true,            // 구글이 인증한 이메일이므로 true
+    name: cleanName,
+    email,                          // 이메일 없으면 빈 문자열
+    emailVerified: !!email,
     tel: '',
-    password: '',                   // 구글 계정 → 비밀번호 없음 (ID/PW 로그인 불가, 구글로만)
+    password: '',                   // 구글 계정 → 비밀번호 없음 (구글로만 로그인)
     provider: 'google',
+    googleUid,                      // 구글 계정 연결키 (다음 로그인 때 이걸로 식별)
     searchCycle: '1주일',
     major: dept,
     college,

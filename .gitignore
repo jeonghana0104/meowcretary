@@ -38,3 +38,7 @@ server/node_modules
 # 구글 인증 비밀 키 차단
 crawler/credentials.json
 crawler/token.json
+
+# Python 캐시
+__pycache__/
+*.pyc

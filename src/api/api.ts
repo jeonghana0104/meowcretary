@@ -60,8 +60,9 @@ export function logout() {
   localStorage.removeItem('name');
 }
 
-// 사이드바 등에서 쓸 현재 로그인 사용자 이름
+// 사이드바 등에서 쓸 현재 로그인 사용자 이름/학번
 export const getUserName = () => localStorage.getItem('name') ?? '';
+export const getStudentId = () => localStorage.getItem('studentId') ?? '';
 
 // 회원가입 입력 (이메일은 반드시 @hanyang.ac.kr)
 export interface SignupInput {

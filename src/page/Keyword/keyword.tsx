@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
-import { getKeywords, addKeyword, deleteKeyword, logout, type Keyword as KeywordRow } from '../../api/api';
+import { getKeywords, addKeyword, deleteKeyword, logout, getUserName, getStudentId, type Keyword as KeywordRow } from '../../api/api';
 
 const NAV_MAIN = [
   { icon: '🏠', label: '대시보드', path: '/dashboard' },
@@ -107,10 +107,10 @@ const Keyword: React.FC = () => {
         {/* 유저 */}
         <div style={{ padding: '14px 14px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>조</div>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>{getUserName().charAt(0) || '?'}</div>
             <div>
-              <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>조에인</div>
-              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>스마트융합공학부</div>
+              <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{getUserName() || '사용자'}</div>
+              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>{getStudentId()}</div>
             </div>
           </div>
           <button onClick={() => { logout(); navigate('/login'); }}

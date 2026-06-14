@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png';
 import { findBuildingCoords } from '../../data/campusBuildings';
-import { logout } from '../../api/api';
+import { logout, getUserName, getStudentId } from '../../api/api';
 
 declare global {
   interface Window { kakao: any; }
@@ -370,10 +370,10 @@ const MapPage: React.FC = () => {
 
           <div style={{ padding: '14px 14px 20px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>조</div>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>{getUserName().charAt(0) || '?'}</div>
               <div>
-                <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>조에인</div>
-                <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>스마트융합공학부</div>
+                <div style={{ color: 'white', fontSize: '13px', fontWeight: '600' }}>{getUserName() || '사용자'}</div>
+                <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: '10px' }}>{getStudentId()}</div>
               </div>
             </div>
             <button onClick={() => { logout(); navigate('/login'); }}
