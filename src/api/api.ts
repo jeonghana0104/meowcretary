@@ -1,5 +1,3 @@
-import axios from 'axios'; // 조예인 크롤러 연동 함수(getUserKeywords 등)에서 사용
-
 // 백엔드(Express + Firebase) 호출 클라이언트
 // 서버: server/ 폴더 (기본 http://localhost:4000)
 
@@ -246,19 +244,5 @@ export const syncExternalApps = async (selectedNotices: any[]) => {
   } catch (error) {
     console.error("외부앱 연동 전송 실패ㅠ:", error);
     return { success: false, message: "통신 실패", detail: { google_calendar: [], notepad: [] } };
-  }
-};
-
-export const getUserKeywords = async () => {
-  try {
-    const response = await axios.get("http://127.0.0.1:8000/api/keywords");
-    return response.data;
-  } catch (error) {
-    console.error("키워드 목록 호출 실패:", error);
-    // 🌟 서버가 꺼져있어도 프론트 시연이 멈추지 않게 기본 키워드를 반환해주는 안전장치
-    return {
-      success: true,
-      data: ['장학금', '공모전', '인턴십', '기말고사', 'SW학부', '채용', '도서관']
-    };
   }
 };

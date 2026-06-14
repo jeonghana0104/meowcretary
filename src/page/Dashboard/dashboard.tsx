@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png'; 
-import { getHanyangNotice, syncExternalApps, logout } from '../../api/api';
-
-const KEYWORDS = ['장학금', '공모전', '인턴십', '기말고사', 'SW학부', '채용', '도서관'];
+import { getHanyangNotice, syncExternalApps, logout, getKeywords, type Keyword } from '../../api/api';
 
 interface AppItem {
   name: string;
@@ -49,7 +47,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [apps, setApps] = useState<AppItem[]>(INITIAL_APPS);
-  const [keywords, setKeywords] = useState(KEYWORDS);
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [notices, setNotices] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'urgent'>('all');
@@ -86,6 +84,8 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchNotices();
+    // 내 키워드 API(Express /api/keywords)에서 등록 키워드 로드
+    getKeywords().then(setKeywords).catch(() => {});
   }, []);
 
   const toggleApp = (i: number) => {
@@ -102,13 +102,6 @@ const Dashboard: React.FC = () => {
       }
       return true;
     });
-
-  const handleSelectNotice = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation(); 
-    setSelectedNoticeIds(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
 
   const handleSelectAll = () => {
     if (selectedNoticeIds.length === filteredNotices.length) {
@@ -256,7 +249,7 @@ const Dashboard: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
             {[
               { id: 'all', icon: '📬', value: loading ? '...' : String(notices.length), label: '오늘 수집된 공지', badge: '전체보기', badgeColor: '#16a34a', badgeBg: '#f0fdf4' },
-              { id: 'keyword', icon: '🏷️', value: '7', label: '등록된 키워드', badge: '활성', badgeColor: '#ea580c', badgeBg: '#fff7ed', path: '/keyword' },
+              { id: 'keyword', icon: '🏷️', value: String(keywords.length), label: '등록된 키워드', badge: '활성', badgeColor: '#ea580c', badgeBg: '#fff7ed', path: '/keyword' },
               { id: 'apps', icon: '🔗', value: String(apps.filter(a => a.enabled).length), label: '연동된 앱', badge: '연동 중', badgeColor: '#2563eb', badgeBg: '#eff6ff' },
               { id: 'urgent', icon: '⭐', value: loading ? '...' : String(urgentCount), label: '마감 임박 공고', badge: 'D-3 이내', badgeColor: '#dc2626', badgeBg: '#fef2f2' },
             ].map(card => {
@@ -397,10 +390,11 @@ const Dashboard: React.FC = () => {
                   <button onClick={() => navigate('/keyword')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#2563eb', fontWeight: '600' }}>편집 →</button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginBottom: '12px' }}>
-                  {keywords.map(kw => (
-                    <span key={kw} style={{ fontSize: '12px', color: '#374151', backgroundColor: '#f3f4f6', padding: '5px 11px', borderRadius: '20px', cursor: 'pointer' }}
-                      onClick={() => setKeywords(prev => prev.filter(k => k !== kw))}>
-                      {kw} ×
+                  {keywords.length === 0 ? (
+                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>등록된 키워드가 없습니다. 추가해보세요!</span>
+                  ) : keywords.map(kw => (
+                    <span key={kw.id} style={{ fontSize: '12px', color: '#374151', backgroundColor: '#f3f4f6', padding: '5px 11px', borderRadius: '20px' }}>
+                      {kw.keyword}
                     </span>
                   ))}
                 </div>

@@ -7,7 +7,6 @@
 //   VITE_FIREBASE_API_KEY, VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID 등
 // ────────────────────────────────────────────────────────────
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -19,11 +18,8 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Firebase 앱 초기화
+// Firebase 앱 초기화 (현재는 구글 로그인 용도로만 사용)
 const app = initializeApp(firebaseConfig);
 
-// Firestore(DB) 핸들 — 다른 파일에서 import 해서 씀
-export const db = getFirestore(app);
-
-// 구글 로그인용 Auth 핸들
+// 구글 로그인용 Auth 핸들 (login.tsx에서 import)
 export const auth = getAuth(app);

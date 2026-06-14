@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CatLogo from '../../assets/비서냥이.png'; // 🎯 오타 (=) 완벽 교정 완료!
 // 🌟 백엔드 API 함수들 (공지사항 및 키워드 목록 가져오기)
-import { getHanyangNotice, getUserKeywords, logout } from '../../api/api';
+import { getHanyangNotice, getKeywords, logout } from '../../api/api';
 
 const NAV_MAIN = [
   { icon: '🏠', label: '대시보드', path: '/dashboard' },
@@ -57,12 +57,13 @@ const NoticesPage: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        // 1. 사용자가 등록한 키워드 목록 가져오기
-        const keywordRes = await getUserKeywords();
+        // 1. 내 키워드 API(Express /api/keywords)에서 등록 키워드 가져오기
         let userKeywords: string[] = [];
-        if (keywordRes && keywordRes.success) {
-          userKeywords = keywordRes.data; 
+        try {
+          userKeywords = (await getKeywords()).map(k => k.keyword);
           setSources(['전체', ...userKeywords]);
+        } catch {
+          // 미로그인이거나 키워드가 없으면 '전체' 탭만 보여줌
         }
 
         // 2. 크롤링된 전체 공지사항 가져오기
