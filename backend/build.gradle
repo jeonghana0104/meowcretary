@@ -25,6 +25,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     // 최신 Google GenAI 스타터 의존성 [4]
     implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
+    implementation 'com.google.firebase:firebase-admin:9.2.0'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
